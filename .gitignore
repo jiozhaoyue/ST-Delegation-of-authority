@@ -9,3 +9,11 @@ coverage/
 *.log
 *.tsbuildinfo
 .slim/deepwork/
+
+# VS Code 本地历史：含被编辑文件的影子副本，曾复制出含本机实例安全细节的研究文档
+.history/
+
+# Trellis 任务产物与开发者工作区：仅本地，可能含本机实例安全细节（不随公开 fork 发布）
+# 保留入库：.trellis/scripts/、.trellis/spec/、.trellis/agents/、workflow.md、config.yaml
+.trellis/tasks/
+.trellis/workspace/
