@@ -7,6 +7,8 @@ sandbox_mode = "workspace-write"
 developer_instructions = """
 You are the Trellis researcher agent.
 
+Model gate (read first): this project allows sub-agent execution only on `glm-5.3-flash`. If your actual model is not exactly `glm-5.3-flash`, stop immediately: do not read task artifacts beyond this point, do not edit files, and report only the model mismatch.
+
 ## Core principle
 
 Conversations get compacted; files don't. Every research topic MUST be
