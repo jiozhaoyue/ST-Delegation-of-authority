@@ -1,38 +1,25 @@
-# Backend Development Guidelines
+# Backend 规范 — `@stdo/example-extension`：**本层不适用**
 
-> Best practices for backend development in this project.
-
----
-
-## Overview
-
-This directory contains guidelines for backend development. Fill in each file with your project's specific conventions.
+> 结论：示例扩展是**纯浏览器扩展**，没有任何后端代码；本层不适用，唯一入口是本文件。
 
 ---
 
-## Guidelines Index
+## 依据（代码取证）
 
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
-| [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
+- `packages/example-extension/src/index.ts`（90+ 行）全部运行在浏览器：从宿主导入 `renderExtensionTemplateAsync` / `Popup`（`src/index.ts:1-2`），经 `window.STAuthority.AuthoritySDK.init()`（:33）接入能力——**它没有自己的服务端**，其后端能力全部来自 Authority（`/api/plugins/authority/*`）。
+- 该包的定位是**官方接入示范**：演示 `declaredPermissions` 最小声明、KV/Blob/HTTP/Jobs/Events 全流程。
+- 目录证据：`packages/example-extension/` 下无任何 Node 端代码（无 routes/services）；`static/` 为浏览器静态资源。
 
 ---
 
-## How to Fill These Guidelines
+## 给 sub-agent 的指引
 
-For each guideline file:
-
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
+- 若任务涉及"给示例扩展加能力演示"，按 [../frontend/index.md](../frontend/index.md) 的接入规范执行。
+- 若任务需要真正的服务端行为，那不属于本包——服务端能力在 `packages/server-plugin`（adapter）与 `crates/authority-core`（core）；接入方式见 `../../sdk-extension/backend/index.md`。
+- 权限声明的最小化要求见 [../frontend/quality-guidelines.md](../frontend/quality-guidelines.md)。
 
 ---
 
-**Language**: All documentation should be written in **English**.
+## 主题文件说明
+
+本层各主题文件均为不适用声明，指向本文件或 frontend 层。

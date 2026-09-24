@@ -1,51 +1,7 @@
-# State Management
+# State Management — `@stdo/example-extension` frontend
 
-> How state is managed in this project.
+> 示例扩展**刻意保持无状态**。总览见 [index](./index.md)。
 
----
-
-## Overview
-
-<!--
-Document your project's state management conventions here.
-
-Questions to answer:
-- What state management solution do you use?
-- How is local vs global state decided?
-- How do you handle server state?
-- What are the patterns for derived state?
--->
-
-(To be filled by the team)
-
----
-
-## State Categories
-
-<!-- Local state, global state, server state, URL state -->
-
-(To be filled by the team)
-
----
-
-## When to Use Global State
-
-<!-- Criteria for promoting state to global -->
-
-(To be filled by the team)
-
----
-
-## Server State
-
-<!-- How server data is cached and synchronized -->
-
-(To be filled by the team)
-
----
-
-## Common Mistakes
-
-<!-- State management mistakes your team has made -->
-
-(To be filled by the team)
+- 模块级状态只有一个 `authorityClient: any`（`packages/example-extension/src/index.ts:22`，SDK init 结果），bootstrap 一次赋值。
+- 演示数据的持久化全部走 Authority 服务端能力（KV / Blob），**不落 localStorage**——这是"事实源在服务端"取向的示范（见 `../../sdk-extension/backend/database-guidelines.md`）。
+- 真实扩展的状态管理规范见 `../../sdk-extension/frontend/state-management.md`。

@@ -1,51 +1,7 @@
-# Logging Guidelines
+# Logging Guidelines — `@stdo/shared-types`
 
-> How logging is done in this project.
+> **不适用**。本包是纯类型包，无运行时逻辑，无日志输出。
 
----
-
-## Overview
-
-<!--
-Document your project's logging conventions here.
-
-Questions to answer:
-- What logging library do you use?
-- What are the log levels and when to use each?
-- What should be logged?
-- What should NOT be logged (PII, secrets)?
--->
-
-(To be filled by the team)
-
----
-
-## Log Levels
-
-<!-- When to use each level: debug, info, warn, error -->
-
-(To be filled by the team)
-
----
-
-## Structured Logging
-
-<!-- Log format, required fields -->
-
-(To be filled by the team)
-
----
-
-## What to Log
-
-<!-- Important events to log -->
-
-(To be filled by the team)
-
----
-
-## What NOT to Log
-
-<!-- Sensitive data, PII, secrets -->
-
-(To be filled by the team)
+- 服务端日志/审计规范：`../../server-plugin/backend/logging-guidelines.md`。
+- 浏览器侧诊断规范：`../../sdk-extension/backend/logging-guidelines.md`。
+- 本包唯一入口总览见 [index](./index.md)。

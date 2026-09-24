@@ -1,51 +1,7 @@
-# Hook Guidelines
+# Hook Guidelines — `@stdo/sdk-extension` frontend
 
-> How hooks are used in this project.
+> **不适用**：本仓前端不使用 React（无 Hook 概念），UI 为原生 DOM 版块模式。
 
----
-
-## Overview
-
-<!--
-Document your project's hook conventions here.
-
-Questions to answer:
-- What custom hooks do you have?
-- How do you handle data fetching?
-- What are the naming conventions?
-- How do you share stateful logic?
--->
-
-(To be filled by the team)
-
----
-
-## Custom Hook Patterns
-
-<!-- How to create and structure custom hooks -->
-
-(To be filled by the team)
-
----
-
-## Data Fetching
-
-<!-- How data fetching is handled (React Query, SWR, etc.) -->
-
-(To be filled by the team)
-
----
-
-## Naming Conventions
-
-<!-- Hook naming rules (use*, etc.) -->
-
-(To be filled by the team)
-
----
-
-## Common Mistakes
-
-<!-- Hook-related mistakes your team has made -->
-
-(To be filled by the team)
+- 组件/版块规范见 [component-guidelines.md](./component-guidelines.md)。
+- 数据获取模式见 [state-management.md](./state-management.md) 与 [../backend/index.md](../backend/index.md)。
+- 本层唯一入口总览见 [index](./index.md)。
