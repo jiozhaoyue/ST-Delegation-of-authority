@@ -9,6 +9,7 @@ import { CompanionModuleLoaderService } from './services/companion-module-loader
 import { CoreService } from './services/core-service.js';
 import { DataTransferService } from './services/data-transfer-service.js';
 import { ExtensionService } from './services/extension-service.js';
+import { ExtensionRegistryService } from './services/extension-registry-service.js';
 import { HttpService } from './services/http-service.js';
 import { HostBridgeService } from './services/host-bridge-service.js';
 import { HostEventLedgerService } from './services/host-event-ledger-service.js';
@@ -80,6 +81,12 @@ export interface AuthorityRuntime {
     workspaceHistory: WorkspaceHistoryService;
     agentProfiles: AgentProfileStoreService;
     agentSessions: AgentSessionRuntimeService;
+    /**
+     * User-scoped extension registry services (L12 plugin inventory), one
+     * per user handle. Each instance owns its own scan cache; instantiated
+     * lazily by `registry-routes` on first use per user.
+     */
+    registries: Map<string, ExtensionRegistryService>;
 }
 
 export function createAuthorityRuntime(): AuthorityRuntime {
@@ -153,5 +160,6 @@ export function createAuthorityRuntime(): AuthorityRuntime {
         workspaceHistory,
         agentProfiles,
         agentSessions,
+        registries: new Map<string, ExtensionRegistryService>(),
     };
 }

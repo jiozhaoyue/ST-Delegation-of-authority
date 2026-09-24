@@ -3897,6 +3897,85 @@
   outline-offset: 2px;
 }
 
+.authority-pill--muted {
+  border-color: var(--authority-border);
+  background: transparent;
+  color: var(--authority-muted);
+}
+
+.authority-registry-record-link {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.authority-registry-record-link code {
+  font-size: 0.78em;
+  color: var(--authority-muted);
+  overflow-wrap: anywhere;
+}
+
+.authority-registry-record-link:hover strong,
+.authority-registry-record-link:focus-visible strong {
+  color: var(--authority-accent, var(--authority-text));
+  text-decoration: underline;
+}
+
+.authority-registry-host-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.authority-registry-host-cell {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--authority-border);
+  border-radius: 3px;
+  background: var(--authority-subtle);
+}
+
+.authority-registry-host-cell strong {
+  font-size: 0.86em;
+}
+
+.authority-registry-host-cell span {
+  font-size: 0.8em;
+  color: var(--authority-muted);
+}
+
+.authority-registry-host-cell--supported {
+  border-color: color-mix(in srgb, var(--authority-success) 45%, var(--authority-border));
+}
+
+.authority-registry-host-cell--supported span {
+  color: color-mix(in srgb, var(--authority-success) 70%, var(--authority-text));
+}
+
+.authority-registry-host-cell--degraded {
+  border-color: color-mix(in srgb, var(--authority-warning) 48%, var(--authority-border));
+}
+
+.authority-registry-host-cell--degraded span {
+  color: color-mix(in srgb, var(--authority-warning) 68%, var(--authority-text));
+}
+
+.authority-registry-host-cell--absent {
+  border-color: color-mix(in srgb, var(--authority-danger) 42%, var(--authority-border));
+}
+
+.authority-registry-host-cell--absent span {
+  color: color-mix(in srgb, var(--authority-danger) 66%, var(--authority-text));
+}
+
+
 @media (max-width: 1000px) {
   .authority-drawer-content {
     left: 0 !important;

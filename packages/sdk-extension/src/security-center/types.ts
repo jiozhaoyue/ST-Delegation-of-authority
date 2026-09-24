@@ -6,6 +6,7 @@ import type {
     AuthorityPackageImportMode,
     AuthorityPackageOperation,
     NativeMigrationOperation,
+    RegistryListResponse as AuthorityRegistryListResponse,
     AuthorityLimitsPolicyState,
     AuthorityInstallStatusCode,
     AuthorityProbeResponse,
@@ -27,7 +28,7 @@ import type { AuthorityPolicyEntry, PermissionResource, PermissionStatus } from 
 import type { StManagerBridgeConfig } from './st-manager-bridge.js';
 import type { StManagerBackupSummary, StManagerControlConfig } from './st-manager-control.js';
 
-export type CenterTab = 'overview' | 'detail' | 'databases' | 'activity' | 'agent' | 'policies' | 'updates' | 'settings';
+export type CenterTab = 'overview' | 'detail' | 'databases' | 'activity' | 'agent' | 'policies' | 'registry' | 'updates' | 'settings';
 export type AuthorityRiskLevel = 'low' | 'medium' | 'high';
 export type AdminUpdateAction = 'git-pull' | 'redeploy-sdk';
 export type SystemView = 'runtime' | 'recovery' | 'migration' | 'diagnostics' | 'backup';
@@ -107,6 +108,7 @@ export type ArtifactDownloadResponse = AuthorityArtifactDownloadResponse;
 export type PackageOperation = AuthorityPackageOperation;
 export type PackageImportMode = AuthorityPackageImportMode;
 export type SecurityCenterNativeMigrationOperation = NativeMigrationOperation;
+export type RegistryListResponse = AuthorityRegistryListResponse;
 
 export interface DatabaseGroupSummary {
     extension: ExtensionSummary;
@@ -166,6 +168,18 @@ export interface SystemWorkbenchState {
     fileDiffs: Map<string, WorkspaceFileDiffLoadState>;
 }
 
+/** 插件注册表版块的独立加载状态（L12 只读发现层）。 */
+export interface RegistryViewState {
+    loading: boolean;
+    error: string | null;
+    /** 已加载的清单快照；`null` 表示尚未加载。 */
+    snapshot: RegistryListResponse | null;
+    /** 当前展开详情的扩展 id；`null` 表示停留在清单视图。 */
+    selectedExtensionId: string | null;
+    /** 管理员触发的重新扫描是否在执行中。 */
+    refreshing: boolean;
+}
+
 export interface SecurityCenterState {
     loading: boolean;
     error: string | null;
@@ -181,6 +195,7 @@ export interface SecurityCenterState {
     policies: PoliciesResponse | null;
     agent: AgentWorkbenchState;
     system: SystemWorkbenchState;
+    registry: RegistryViewState;
     mobile: MobilePresentationState;
     policyEditorExtensionId: string | null;
     packageOperations: PackageOperation[];

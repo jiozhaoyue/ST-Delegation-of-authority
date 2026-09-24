@@ -87,3 +87,4 @@ npm run bench:scale
 | [Error Handling](./error-handling.md) | 统一错误合同与审计 | 已填实 |
 | [Quality Guidelines](./quality-guidelines.md) | route 编写规范与禁区索引 | 已填实 |
 | [Logging Guidelines](./logging-guidelines.md) | 审计日志与 console 约定 | 已填实 |
+| [Registry Guidelines](./registry-guidelines.md) | 插件注册表（L12 只读发现层）：扫描纪律、缓存、冲突规则、宿主矩阵 | 已填实 |

@@ -108,6 +108,7 @@ function governanceState(): SecurityCenterState {
         policies: null,
         agent: {} as SecurityCenterState['agent'],
         system: {} as SecurityCenterState['system'],
+        registry: { loading: false, error: null, snapshot: null, selectedExtensionId: null, refreshing: false },
         mobile: { surface: 'none' },
         policyEditorExtensionId: null,
         packageOperations: [],

@@ -74,6 +74,9 @@ import type {
     PrivateFileReadResponse,
     PrivateFileTransferCommitRequest,
     PrivateFileWriteRequest,
+    RegistryGetResponse,
+    RegistryListResponse,
+    RegistryRefreshResponse,
     SessionInitResponse,
     SqlBatchRequest,
     SqlBatchResponse,
@@ -645,6 +648,12 @@ export class AuthorityClient {
         list: () => Promise<ModuleListResponse>;
         get: (moduleId: string) => Promise<AuthorityModuleManifest>;
         execute: <TResult = unknown>(moduleId: string, transactionName: string, input?: unknown, options?: AuthorityModuleTransactionOptions) => Promise<AuthorityModuleTransactionResponse<TResult>>;
+    };
+
+    readonly registry: {
+        list: () => Promise<RegistryListResponse>;
+        get: (extensionId: string) => Promise<RegistryGetResponse>;
+        refresh: () => Promise<RegistryRefreshResponse>;
     };
 
     readonly host: {
@@ -1971,6 +1980,23 @@ export class AuthorityClient {
                         body,
                     },
                 );
+            },
+        };
+
+        this.registry = {
+            list: async () => {
+                return await this.requestWithSession<RegistryListResponse>('/registry/extensions');
+            },
+            get: async extensionId => {
+                const trimmed = extensionId.trim();
+                if (!trimmed) throw new Error('Authority registry.get extensionId is required');
+                return await this.requestWithSession<RegistryGetResponse>(`/registry/extensions/${encodeURIComponent(trimmed)}`);
+            },
+            refresh: async () => {
+                return await this.requestWithSession<RegistryRefreshResponse>('/registry/refresh', {
+                    method: 'POST',
+                    body: {},
+                });
             },
         };
 

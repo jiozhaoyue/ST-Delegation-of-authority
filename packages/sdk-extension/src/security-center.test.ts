@@ -15,7 +15,7 @@ describe('Security Center tab interaction', () => {
     const systemCss = fs.readFileSync(path.resolve(__dirname, '../static/styles/system-workbench.css'), 'utf8');
 
     it('declares a primary tab name whitelist matching all valid CenterTab values', () => {
-        expect(source).toContain("const PRIMARY_TAB_NAMES: readonly CenterTab[] = ['overview', 'detail', 'databases', 'activity', 'agent', 'policies', 'updates', 'settings']");
+        expect(source).toContain("const PRIMARY_TAB_NAMES: readonly CenterTab[] = ['overview', 'detail', 'databases', 'activity', 'agent', 'policies', 'registry', 'updates', 'settings']");
     });
 
     it('provides a type guard to validate arbitrary tab values against the whitelist', () => {
@@ -23,7 +23,7 @@ describe('Security Center tab interaction', () => {
         expect(source).toContain('(PRIMARY_TAB_NAMES as readonly string[]).includes(value)');
     });
 
-    it('maps the eight views into Agent, extensions, system, and settings areas', () => {
+    it('maps the nine views into Agent, extensions, system, and settings areas', () => {
         expect(source).toContain("type CenterArea = 'agent' | 'governance' | 'system' | 'settings'");
         expect(source).toContain("if (tab === 'agent') return 'agent'");
         expect(source).toContain("if (tab === 'updates') return 'system'");
@@ -107,7 +107,7 @@ describe('Security Center tab interaction', () => {
         expect(bindEventsBody).toContain('if (isValidCenterTab(tab)) {');
     });
 
-    it('static HTML preserves all eight panels and groups them below four primary areas', () => {
+    it('static HTML preserves all nine panels and groups them below four primary areas', () => {
         const areas = Array.from(html.matchAll(/<button[^>]*class="authority-area-tab"[^>]*data-area="([^"]+)"[^>]*>/g));
         const tabs = Array.from(html.matchAll(/<button[^>]*class="authority-tab"[^>]*data-tab="([^"]+)"[^>]*>/g));
         const panels = Array.from(html.matchAll(/<section[^>]*data-section="([^"]+)"[^>]*>/g));
@@ -117,8 +117,8 @@ describe('Security Center tab interaction', () => {
         const panelNames = panels.map(match => match[1]);
 
         expect(areaNames).toEqual(['agent', 'governance', 'system', 'settings']);
-        expect(tabNames).toEqual(['detail', 'overview', 'databases', 'activity', 'policies']);
-        expect(panelNames).toEqual(['agent', 'detail', 'overview', 'databases', 'activity', 'policies', 'updates', 'settings']);
+        expect(tabNames).toEqual(['detail', 'overview', 'databases', 'activity', 'policies', 'registry']);
+        expect(panelNames).toEqual(['agent', 'detail', 'overview', 'databases', 'activity', 'policies', 'registry', 'updates', 'settings']);
         expect(areaPanels.map(match => match[1])).toEqual(['agent', 'governance', 'system', 'settings']);
 
         for (const match of tabs) {

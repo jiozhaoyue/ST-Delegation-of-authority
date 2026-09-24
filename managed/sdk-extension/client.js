@@ -139,6 +139,7 @@ export class AuthorityClient {
     jobs;
     events;
     modules;
+    registry;
     host;
     agent;
     session = null;
@@ -1376,6 +1377,23 @@ export class AuthorityClient {
                 return await this.requestWithSession(`/modules/${encodeURIComponent(trimmedModuleId)}/transactions/${encodeURIComponent(trimmedTransactionName)}`, {
                     method: 'POST',
                     body,
+                });
+            },
+        };
+        this.registry = {
+            list: async () => {
+                return await this.requestWithSession('/registry/extensions');
+            },
+            get: async (extensionId) => {
+                const trimmed = extensionId.trim();
+                if (!trimmed)
+                    throw new Error('Authority registry.get extensionId is required');
+                return await this.requestWithSession(`/registry/extensions/${encodeURIComponent(trimmed)}`);
+            },
+            refresh: async () => {
+                return await this.requestWithSession('/registry/refresh', {
+                    method: 'POST',
+                    body: {},
                 });
             },
         };

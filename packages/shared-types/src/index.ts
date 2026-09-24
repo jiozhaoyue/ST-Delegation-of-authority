@@ -12,6 +12,7 @@ export type * from './native-migration.js';
 export type * from './permissions.js';
 export type * from './private-fs.js';
 export type * from './probe.js';
+export type * from './registry.js';
 export type * from './session.js';
 export type * from './sql.js';
 export type * from './storage.js';

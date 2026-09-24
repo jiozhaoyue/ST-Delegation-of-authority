@@ -350,10 +350,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _routes_http_routes_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./routes/http-routes.js */ "./src/routes/http-routes.ts");
 /* harmony import */ var _routes_host_routes_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./routes/host-routes.js */ "./src/routes/host-routes.ts");
 /* harmony import */ var _routes_module_routes_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./routes/module-routes.js */ "./src/routes/module-routes.ts");
-/* harmony import */ var _routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./routes/agent-history-routes.js */ "./src/routes/agent-history-routes.ts");
-/* harmony import */ var _routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./routes/agent-routes.js */ "./src/routes/agent-routes.ts");
-/* harmony import */ var _runtime_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./runtime.js */ "./src/runtime.ts");
-/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./utils.js */ "./src/utils.ts");
+/* harmony import */ var _routes_registry_routes_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./routes/registry-routes.js */ "./src/routes/registry-routes.ts");
+/* harmony import */ var _routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./routes/agent-history-routes.js */ "./src/routes/agent-history-routes.ts");
+/* harmony import */ var _routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./routes/agent-routes.js */ "./src/routes/agent-routes.ts");
+/* harmony import */ var _runtime_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./runtime.js */ "./src/runtime.ts");
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./utils.js */ "./src/utils.ts");
+
 
 
 
@@ -376,7 +378,7 @@ function ok(res, data) {
 function fail(runtime, req, res, extensionId, error) {
     const normalized = normalizeAuthorityError(error);
     try {
-        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
         if (normalized.payload.category === 'permission' && isPermissionErrorDetails(normalized.payload.details)) {
             void runtime.audit.logPermission(user, extensionId, 'Permission denied', {
                 ...normalized.payload.details,
@@ -401,7 +403,7 @@ function buildPermissionErrorPayload(message) {
         return null;
     }
     const target = match[2]?.trim();
-    const descriptor = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.buildPermissionDescriptor)(resource, target);
+    const descriptor = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.buildPermissionDescriptor)(resource, target);
     return {
         error: message,
         code: 'permission_not_granted',
@@ -436,13 +438,13 @@ function isPermissionErrorDetails(value) {
         && 'riskLevel' in value;
 }
 function normalizeAuthorityError(error) {
-    if ((0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.isAuthorityServiceError)(error)) {
+    if ((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.isAuthorityServiceError)(error)) {
         return {
             status: error.status,
             payload: error.toPayload(),
         };
     }
-    const message = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.asErrorMessage)(error);
+    const message = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.asErrorMessage)(error);
     const permissionErrorPayload = buildPermissionErrorPayload(message);
     if (permissionErrorPayload) {
         return {
@@ -831,15 +833,15 @@ function shouldRedactDiagnosticKey(key) {
         || normalized.includes('token')
         || normalized.includes('secret');
 }
-function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODULE_13__.createAuthorityRuntime)()) {
+function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODULE_14__.createAuthorityRuntime)()) {
     router.post('/probe', async (req, res) => {
-        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
         ok(res, await buildProbeResponse(runtime, user));
     });
     (0,_routes_st_manager_routes_js__WEBPACK_IMPORTED_MODULE_3__.registerStManagerRoutes)(router, runtime, fail);
     router.post('/session/init', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             const config = (req.body ?? {});
             const session = await runtime.sessions.createSession(user, config);
             const grants = await runtime.permissions.listPersistentGrants(user, session.extension.id);
@@ -854,8 +856,8 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/session/current', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
             const limits = await runtime.permissions.getEffectiveSessionLimits(user, session.extension.id);
             ok(res, runtime.sessions.buildSessionResponse(session, await runtime.permissions.listPersistentGrants(user, session.extension.id), await runtime.permissions.getPolicyEntries(user, session.extension.id), limits, runtime.modules.visibleCount()));
         }
@@ -865,8 +867,8 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/permissions/evaluate', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
             const evaluation = await runtime.permissions.evaluate(user, session, req.body);
             if (evaluation.decision === 'denied' || evaluation.decision === 'blocked') {
                 await runtime.audit.logPermission(user, session.extension.id, 'Permission denied', {
@@ -884,11 +886,11 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/permissions/evaluate-batch', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
             const payload = (req.body ?? {});
             if (payload.requests !== undefined && !Array.isArray(payload.requests)) {
-                throw new _utils_js__WEBPACK_IMPORTED_MODULE_14__.AuthorityServiceError('Permission batch requests must be an array', 400, 'validation_error', 'validation');
+                throw new _utils_js__WEBPACK_IMPORTED_MODULE_15__.AuthorityServiceError('Permission batch requests must be an array', 400, 'validation_error', 'validation');
             }
             const results = await runtime.permissions.evaluateBatch(user, session, payload.requests ?? []);
             const response = { results };
@@ -900,8 +902,8 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/permissions/resolve', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
             const payload = req.body;
             const grant = await runtime.permissions.resolve(user, session, payload, payload.choice);
             await runtime.audit.logPermission(user, session.extension.id, grant.status === 'denied' ? 'Permission denied' : 'Permission granted', {
@@ -918,7 +920,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/extensions', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             const list = await Promise.all((await runtime.extensions.listExtensions(user)).map(async (extension) => {
                 const grants = await runtime.permissions.listPersistentGrants(user, extension.id);
                 const sqlDatabases = (await (0,_routes_sql_routes_js__WEBPACK_IMPORTED_MODULE_7__.listPrivateSqlDatabases)(runtime, user, extension.id)).databases;
@@ -938,7 +940,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/extensions/:id', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             const extensionId = decodeURIComponent(req.params?.id ?? '');
             const extension = await runtime.extensions.getExtension(user, extensionId);
             if (!extension) {
@@ -966,7 +968,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/extensions/:id/grants/reset', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             const extensionId = decodeURIComponent(req.params?.id ?? '');
             await runtime.permissions.resetPersistentGrants(user, extensionId, req.body?.keys);
             await runtime.audit.logPermission(user, extensionId, 'Persistent grants reset', {
@@ -988,13 +990,14 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     (0,_routes_trivium_routes_js__WEBPACK_IMPORTED_MODULE_6__.registerTriviumRoutes)(router, runtime, fail);
     (0,_routes_host_routes_js__WEBPACK_IMPORTED_MODULE_9__.registerHostRoutes)(router, runtime, fail);
     (0,_routes_module_routes_js__WEBPACK_IMPORTED_MODULE_10__.registerModuleRoutes)(router, runtime, fail);
+    (0,_routes_registry_routes_js__WEBPACK_IMPORTED_MODULE_11__.registerRegistryRoutes)(router, runtime, fail);
     (0,_routes_http_routes_js__WEBPACK_IMPORTED_MODULE_8__.registerHttpRoutes)(router, runtime, fail);
     (0,_routes_jobs_events_routes_js__WEBPACK_IMPORTED_MODULE_5__.registerJobsAndEventsRoutes)(router, runtime, fail);
-    (0,_routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_11__.registerAgentHistoryRoutes)(router, runtime, fail);
-    (0,_routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_12__.registerAgentRoutes)(router, runtime, fail);
+    (0,_routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_12__.registerAgentHistoryRoutes)(router, runtime, fail);
+    (0,_routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_13__.registerAgentRoutes)(router, runtime, fail);
     router.get('/admin/policies', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             if (!user.isAdmin) {
                 throw new Error('Forbidden');
             }
@@ -1006,7 +1009,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/policies', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             const result = await runtime.policies.saveGlobalPolicies(user, req.body ?? {});
             await runtime.audit.logUsage(user, 'third-party/st-authority-sdk', 'Policies updated');
             ok(res, result);
@@ -1017,7 +1020,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/usage-summary', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, await buildUsageSummary(runtime, user));
         }
@@ -1027,7 +1030,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/import-export/operations', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, {
                 operations: runtime.adminPackages.listOperations(user),
@@ -1039,7 +1042,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/export', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             const operation = runtime.adminPackages.startExport(user, (req.body ?? {}));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Export package started', {
@@ -1054,7 +1057,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/import-transfer/init', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, await runtime.transfers.init(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, {
                 resource: 'fs.private',
@@ -1067,7 +1070,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/import', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             const payload = (req.body ?? {});
             const transfer = runtime.transfers.get(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, String(payload.transferId ?? ''), 'fs.private');
@@ -1086,7 +1089,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/operations/:id/resume', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             const operation = runtime.adminPackages.resume(user, String(req.params?.id ?? ''));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Import/export operation resumed', {
@@ -1101,7 +1104,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/operations/:id/open-download', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             const artifact = runtime.adminPackages.getArtifact(user, String(req.params?.id ?? ''));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Import/export artifact opened', {
@@ -1116,7 +1119,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/native-migration/operations', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, {
                 operations: runtime.nativeMigrations.listOperations(),
@@ -1128,7 +1131,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/upload/init', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             const sizeBytes = parseNativeMigrationSizeBytes(req.body?.sizeBytes);
             ok(res, await runtime.transfers.init(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, {
@@ -1142,7 +1145,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/preview', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             const payload = (req.body ?? {});
             const transfer = runtime.transfers.get(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, String(payload.transferId ?? ''), 'fs.private');
@@ -1165,7 +1168,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/operations/:id/apply', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             const payload = (req.body ?? {});
             const operation = await runtime.nativeMigrations.apply(String(req.params?.id ?? ''), payload.mode ?? 'skip');
@@ -1185,7 +1188,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/operations/:id/rollback', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             const operation = runtime.nativeMigrations.rollback(String(req.params?.id ?? ''));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Native migration rolled back', {
@@ -1200,7 +1203,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/diagnostic-bundle', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, await buildDiagnosticBundle(runtime, user));
         }
@@ -1210,7 +1213,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/diagnostic-bundle/archive', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             assertAdminUser(user);
             const artifact = runtime.adminPackages.createDiagnosticArchive(user, await buildDiagnosticBundle(runtime, user));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Diagnostic archive created', {
@@ -1225,7 +1228,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/update', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
             if (!user.isAdmin) {
                 throw new Error('Forbidden');
             }
@@ -1278,9 +1281,9 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
                         : `更新失败后后台服务状态为 ${recovery.state}。`;
                 }
                 catch (recoveryError) {
-                    recoveryMessage = `更新失败且后台服务恢复失败：${(0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.asErrorMessage)(recoveryError)}`;
+                    recoveryMessage = `更新失败且后台服务恢复失败：${(0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.asErrorMessage)(recoveryError)}`;
                 }
-                throw new Error(`${(0,_utils_js__WEBPACK_IMPORTED_MODULE_14__.asErrorMessage)(error)} ${recoveryMessage}`.trim());
+                throw new Error(`${(0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.asErrorMessage)(error)} ${recoveryMessage}`.trim());
             }
         }
         catch (error) {
@@ -2586,6 +2589,121 @@ function registerModuleRoutes(router, runtime, fail) {
             // attributes the failure to the calling extension rather than the SDK.
             extensionId = await resolveAuditExtensionId(runtime, req);
             fail(runtime, req, res, extensionId, error);
+        }
+    });
+}
+
+
+/***/ },
+
+/***/ "./src/routes/registry-routes.ts"
+/*!***************************************!*\
+  !*** ./src/routes/registry-routes.ts ***!
+  \***************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   registerRegistryRoutes: () => (/* binding */ registerRegistryRoutes)
+/* harmony export */ });
+/* harmony import */ var _services_extension_registry_service_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../services/extension-registry-service.js */ "./src/services/extension-registry-service.ts");
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils.js */ "./src/utils.ts");
+
+
+function ok(res, data) {
+    res.json(data);
+}
+function decodeParam(value) {
+    return typeof value === 'string' ? decodeURIComponent(value) : '';
+}
+/**
+ * Resolve the user-scoped registry instance for a request. The runtime
+ * holds one {@link ExtensionRegistryService} per user handle (each user's
+ * control DB is isolated), each with its own scan cache; refresh on one
+ * user's registry never touches another user's snapshot.
+ */
+function registryFor(runtime, user) {
+    let registry = runtime.registries.get(user.handle);
+    if (!registry) {
+        registry = new _services_extension_registry_service_js__WEBPACK_IMPORTED_MODULE_0__.ExtensionRegistryService({
+            resolveSillyTavernRoot: () => runtime.install.getSillyTavernRoot(),
+            getRegisteredExtensions: async () => {
+                const entries = await runtime.extensions.listExtensions(user);
+                const map = new Map();
+                for (const entry of entries) {
+                    map.set(entry.id, { declaredPermissions: entry.declaredPermissions });
+                }
+                return map;
+            },
+            getModuleRecords: () => runtime.modules.listRecords(),
+            getObservedUsage: async () => {
+                const map = new Map();
+                const extensionIds = new Set(runtime.modules.listRecords().map((record) => record.source.extensionId));
+                for (const extensionId of extensionIds) {
+                    try {
+                        const activity = await runtime.audit.getRecentActivity(user, extensionId);
+                        if (activity.usage.length > 0) {
+                            map.set(extensionId, activity.usage.map((record) => record.message));
+                        }
+                    }
+                    catch {
+                        // Audit reads are best-effort; a failing read never
+                        // breaks the registry scan.
+                    }
+                }
+                return map;
+            },
+            logger: console,
+        });
+        runtime.registries.set(user.handle, registry);
+    }
+    return registry;
+}
+function registerRegistryRoutes(router, runtime, fail) {
+    router.get('/registry/extensions', async (req, res) => {
+        let extensionId = 'registry';
+        try {
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_1__.getSessionToken)(req), user);
+            extensionId = session.extension.id;
+            ok(res, await registryFor(runtime, user).list());
+        }
+        catch (error) {
+            fail(runtime, req, res, extensionId, error);
+        }
+    });
+    router.get('/registry/extensions/:extensionId', async (req, res) => {
+        let auditExtensionId = 'registry';
+        try {
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_1__.getSessionToken)(req), user);
+            auditExtensionId = session.extension.id;
+            const result = await registryFor(runtime, user).get(decodeParam(req.params?.extensionId));
+            if (!result.record) {
+                res.status(404).json({ error: 'extension_not_found' });
+                return;
+            }
+            ok(res, result);
+        }
+        catch (error) {
+            fail(runtime, req, res, auditExtensionId, error);
+        }
+    });
+    router.post('/registry/refresh', async (req, res) => {
+        let auditExtensionId = 'registry';
+        try {
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__.getUserContext)(req);
+            if (!user.isAdmin) {
+                res.status(403).json({ error: 'admin_required' });
+                return;
+            }
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_1__.getSessionToken)(req), user);
+            auditExtensionId = session.extension.id;
+            const snapshot = await registryFor(runtime, user).refresh();
+            ok(res, { refreshed: true, generatedAt: snapshot.generatedAt });
+        }
+        catch (error) {
+            fail(runtime, req, res, auditExtensionId, error);
         }
     });
 }
@@ -4483,6 +4601,7 @@ function createAuthorityRuntime() {
         workspaceHistory,
         agentProfiles,
         agentSessions,
+        registries: new Map(),
     };
 }
 
@@ -14455,6 +14574,378 @@ async function ensureDefaultAgentWorkspace(services) {
 
 /***/ },
 
+/***/ "./src/services/extension-registry-service.ts"
+/*!****************************************************!*\
+  !*** ./src/services/extension-registry-service.ts ***!
+  \****************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ExtensionRegistryService: () => (/* binding */ ExtensionRegistryService)
+/* harmony export */ });
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:fs */ "node:fs");
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _constants_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../constants.js */ "./src/constants.ts");
+/* harmony import */ var _host_capability_matrix_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./host-capability-matrix.js */ "./src/services/host-capability-matrix.ts");
+
+
+
+
+/**
+ * Authority extension registry service (L12).
+ *
+ * Read-only inventory layer that aggregates:
+ *  1. the full list of installed third-party SillyTavern extensions (from
+ *     the extensions directory on disk),
+ *  2. per-user extension registrations with declared permissions (from the
+ *     control DB via {@link ExtensionService}),
+ *  3. companion module discovery records (from {@link ModuleHostService}),
+ *  4. audit-observed capability usage (read-only aggregation over existing
+ *     audit logs, no new instrumentation).
+ *
+ * Scanning discipline mirrors {@link ModuleDiscoveryService}: this service
+ * never executes extension code, never follows symlinks, never recurses into
+ * nested directories, and skips `node_modules` / `dist` / `.git` / `target`.
+ * A single failing extension becomes a diagnostic, never a scan abort.
+ *
+ * Results are cached in process memory. The cache has no TTL; the only
+ * invalidation entry point is {@link refresh} (admin-gated route). The first
+ * {@link list} call lazily triggers a scan, and concurrent calls share the
+ * in-flight scan promise (single-flight merge).
+ */
+const SKIP_DIRECTORY_NAMES = new Set([
+    'node_modules',
+    'dist',
+    '.git',
+    'target',
+]);
+/** PermissionResource prefix -> registry capability. */
+const RESOURCE_PREFIX_TO_CAPABILITY = new Map([
+    ['storage.kv', 'kv'],
+    ['storage.blob', 'blob'],
+    ['fs.private', 'fs'],
+    ['sql.private', 'sql'],
+    ['trivium.private', 'trivium'],
+    ['http.fetch', 'http'],
+    ['jobs.background', 'jobs'],
+    ['events.stream', 'events'],
+    ['module.execute', 'trivium'],
+    ['agent.run', 'agent'],
+    ['agent.browser', 'agent'],
+]);
+/** Audit usage message keyword -> capability (loose textual match). */
+const AUDIT_KEYWORD_TO_CAPABILITY = new Map([
+    ['sql', 'sql'],
+    ['kv', 'kv'],
+    ['blob', 'blob'],
+    ['fs', 'fs'],
+    ['http', 'http'],
+    ['jobs', 'jobs'],
+    ['event', 'events'],
+    ['trivium', 'trivium'],
+    ['agent', 'agent'],
+    ['host-bridge', 'host-bridge'],
+]);
+class ExtensionRegistryService {
+    deps;
+    cache = null;
+    scanning = null;
+    constructor(deps) {
+        this.deps = deps;
+    }
+    async list() {
+        if (this.cache) {
+            return this.cache;
+        }
+        if (this.scanning) {
+            return this.scanning;
+        }
+        this.scanning = this.scan().finally(() => {
+            this.scanning = null;
+        });
+        return this.scanning;
+    }
+    async get(extensionId) {
+        const snapshot = await this.list();
+        const record = snapshot.records.find((entry) => entry.extensionId === extensionId) ?? null;
+        const conflicts = snapshot.conflicts.filter((conflict) => conflict.extensionIds.includes(extensionId));
+        return { record, conflicts };
+    }
+    async refresh() {
+        this.cache = null;
+        return this.list();
+    }
+    async scan() {
+        const sillyTavernRoot = this.deps.resolveSillyTavernRoot();
+        const records = [];
+        const conflicts = [];
+        const [registered, moduleRecords, observedUsage] = await Promise.all([
+            this.deps.getRegisteredExtensions().catch(() => new Map()),
+            Promise.resolve(this.deps.getModuleRecords()),
+            this.deps.getObservedUsage().catch(() => new Map()),
+        ]);
+        if (sillyTavernRoot) {
+            const thirdPartyRoot = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(sillyTavernRoot, 'public', 'scripts', 'extensions', 'third-party');
+            let entries = [];
+            try {
+                entries = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readdirSync(thirdPartyRoot, { withFileTypes: true });
+            }
+            catch {
+                entries = [];
+            }
+            for (const entry of entries) {
+                if (!entry.isDirectory() || entry.isSymbolicLink() || SKIP_DIRECTORY_NAMES.has(entry.name)) {
+                    continue;
+                }
+                const extensionId = `third-party/${entry.name}`;
+                records.push(this.buildRecord(extensionId, entry.name, node_path__WEBPACK_IMPORTED_MODULE_1___default().join(thirdPartyRoot, entry.name), {
+                    registered,
+                    moduleRecords,
+                    observedUsage,
+                }));
+            }
+        }
+        // Extensions registered in the control DB but no longer present on
+        // disk (uninstalled while registered) still surface as records so the
+        // inventory answers "what does Authority still know about".
+        const seenIds = new Set(records.map((record) => record.extensionId));
+        for (const extensionId of registered.keys()) {
+            if (!seenIds.has(extensionId)) {
+                records.push(this.buildRecord(extensionId, extensionId, null, {
+                    registered,
+                    moduleRecords,
+                    observedUsage,
+                }));
+            }
+        }
+        this.detectConflicts(records, moduleRecords, conflicts);
+        records.sort((a, b) => a.extensionId.localeCompare(b.extensionId));
+        const snapshot = {
+            records,
+            count: records.length,
+            generatedAt: new Date().toISOString(),
+            conflicts,
+        };
+        this.cache = snapshot;
+        return snapshot;
+    }
+    buildRecord(extensionId, fallbackName, extensionDir, context) {
+        const diagnostics = [];
+        let displayName = fallbackName;
+        let version = null;
+        if (extensionDir) {
+            const manifestPath = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(extensionDir, 'manifest.json');
+            try {
+                const raw = node_fs__WEBPACK_IMPORTED_MODULE_0___default().readFileSync(manifestPath, 'utf8');
+                const manifest = JSON.parse(raw);
+                if (typeof manifest.display_name === 'string' && manifest.display_name.length > 0) {
+                    displayName = manifest.display_name;
+                }
+                if (typeof manifest.version === 'string') {
+                    version = manifest.version;
+                }
+            }
+            catch (error) {
+                diagnostics.push({
+                    severity: 'warning',
+                    code: 'manifest_unreadable',
+                    message: `Unable to read extension manifest.json: ${error.message}`,
+                });
+            }
+        }
+        else {
+            diagnostics.push({
+                severity: 'info',
+                code: 'extension_dir_missing',
+                message: 'Extension is registered with Authority but not present in the extensions directory.',
+            });
+        }
+        // Owner-extension identity comes back from discovery as
+        // `third-party/<dir>`; module records map onto the same extension id.
+        const moduleRecords = context.moduleRecords.filter((record) => record.source.extensionId === extensionId);
+        const moduleIds = [...new Set(moduleRecords.map((record) => record.moduleId))];
+        const dependencyMap = new Map();
+        for (const moduleRecord of moduleRecords) {
+            if (!moduleRecord.manifest) {
+                continue;
+            }
+            for (const transaction of Object.values(moduleRecord.manifest.transactions)) {
+                for (const required of transaction.requiredResources ?? []) {
+                    const capability = RESOURCE_PREFIX_TO_CAPABILITY.get(required.resource);
+                    if (capability) {
+                        dependencyMap.get(capability)?.add('manifest') ?? dependencyMap.set(capability, new Set(['manifest']));
+                    }
+                }
+            }
+            if (moduleRecord.manifest.protocolVersion !== _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_MODULE_PROTOCOL_VERSION) {
+                // protocol_mismatch conflicts are detected below across
+                // records; surfaced here as a record diagnostic too.
+                diagnostics.push({
+                    severity: 'warning',
+                    code: 'protocol_mismatch',
+                    message: `Companion module declares protocolVersion ${String(moduleRecord.manifest.protocolVersion)}, expected ${_constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_MODULE_PROTOCOL_VERSION}.`,
+                });
+            }
+        }
+        const declared = context.registered.get(extensionId)?.declaredPermissions ?? null;
+        if (declared) {
+            for (const capability of capabilitiesFromDeclaredPermissions(declared)) {
+                dependencyMap.get(capability)?.add('session') ?? dependencyMap.set(capability, new Set(['session']));
+            }
+        }
+        const observedMessages = context.observedUsage.get(extensionId);
+        if (observedMessages) {
+            for (const message of observedMessages) {
+                const lowered = message.toLowerCase();
+                for (const [keyword, capability] of AUDIT_KEYWORD_TO_CAPABILITY) {
+                    if (lowered.includes(keyword)) {
+                        dependencyMap.get(capability)?.add('observed') ?? dependencyMap.set(capability, new Set(['observed']));
+                    }
+                }
+            }
+        }
+        const dependencies = [...dependencyMap.entries()]
+            .map(([capability, sources]) => ({
+            capability,
+            sources: orderSources(sources),
+        }))
+            .sort((a, b) => a.capability.localeCompare(b.capability));
+        const isAuthorityUser = moduleIds.length > 0 || declared !== null || (observedMessages?.length ?? 0) > 0;
+        const capabilitySet = dependencies.map((entry) => entry.capability);
+        const crossHost = {
+            estimates: Object.fromEntries(_host_capability_matrix_js__WEBPACK_IMPORTED_MODULE_3__.REGISTRY_HOSTS.map((host) => [host, (0,_host_capability_matrix_js__WEBPACK_IMPORTED_MODULE_3__.estimateForHost)(capabilitySet, host)])),
+        };
+        return {
+            extensionId,
+            displayName,
+            version,
+            isAuthorityUser,
+            dependencies,
+            moduleIds,
+            crossHost,
+            diagnostics,
+        };
+    }
+    detectConflicts(records, moduleRecords, conflicts) {
+        const ownerIdByModuleId = new Map();
+        const transactionsByOwner = new Map();
+        for (const moduleRecord of moduleRecords) {
+            const owners = ownerIdByModuleId.get(moduleRecord.moduleId) ?? [];
+            owners.push(moduleRecord.source.extensionId);
+            ownerIdByModuleId.set(moduleRecord.moduleId, owners);
+            if (moduleRecord.manifest) {
+                const names = transactionsByOwner.get(moduleRecord.source.extensionId) ?? new Set();
+                for (const transactionName of Object.keys(moduleRecord.manifest.transactions)) {
+                    names.add(transactionName);
+                }
+                transactionsByOwner.set(moduleRecord.source.extensionId, names);
+                if (moduleRecord.manifest.protocolVersion !== _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_MODULE_PROTOCOL_VERSION) {
+                    conflicts.push({
+                        severity: 'warning',
+                        kind: 'protocol_mismatch',
+                        extensionIds: [moduleRecord.source.extensionId],
+                        detail: `Module ${moduleRecord.moduleId} declares protocolVersion ${String(moduleRecord.manifest.protocolVersion)}, expected ${_constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_MODULE_PROTOCOL_VERSION}.`,
+                    });
+                }
+            }
+        }
+        for (const [moduleId, owners] of ownerIdByModuleId) {
+            const uniqueOwners = [...new Set(owners)];
+            if (uniqueOwners.length > 1) {
+                conflicts.push({
+                    severity: 'error',
+                    kind: 'duplicate_module_id',
+                    extensionIds: uniqueOwners,
+                    detail: `Module id ${moduleId} is declared by multiple extensions: ${uniqueOwners.join(', ')}.`,
+                });
+            }
+        }
+        const transactionOwners = new Map();
+        for (const [owner, names] of transactionsByOwner) {
+            for (const name of names) {
+                const owners = transactionOwners.get(name) ?? [];
+                owners.push(owner);
+                transactionOwners.set(name, owners);
+            }
+        }
+        for (const [transactionName, owners] of transactionOwners) {
+            const uniqueOwners = [...new Set(owners)];
+            if (uniqueOwners.length > 1) {
+                conflicts.push({
+                    severity: 'error',
+                    kind: 'duplicate_transaction',
+                    extensionIds: uniqueOwners,
+                    detail: `Transaction name ${transactionName} is declared by multiple modules: ${uniqueOwners.join(', ')}.`,
+                });
+            }
+        }
+        for (const record of records) {
+            const reportedCapabilities = new Set();
+            for (const dependency of record.dependencies) {
+                if (reportedCapabilities.has(dependency.capability)) {
+                    continue;
+                }
+                for (const host of _host_capability_matrix_js__WEBPACK_IMPORTED_MODULE_3__.REGISTRY_HOSTS) {
+                    if ((0,_host_capability_matrix_js__WEBPACK_IMPORTED_MODULE_3__.estimateForHost)([dependency.capability], host) === 'absent') {
+                        reportedCapabilities.add(dependency.capability);
+                        conflicts.push({
+                            severity: 'warning',
+                            kind: 'unsupported_capability_on_host',
+                            extensionIds: [record.extensionId],
+                            detail: `Extension ${record.extensionId} depends on ${dependency.capability}, which is absent on ${host}.`,
+                        });
+                    }
+                }
+            }
+        }
+    }
+}
+function capabilitiesFromDeclaredPermissions(declared) {
+    const capabilities = [];
+    if (declared.storage?.kv) {
+        capabilities.push('kv');
+    }
+    if (declared.storage?.blob) {
+        capabilities.push('blob');
+    }
+    if (declared.fs?.private) {
+        capabilities.push('fs');
+    }
+    if (declared.sql?.private) {
+        capabilities.push('sql');
+    }
+    if (declared.trivium?.private) {
+        capabilities.push('trivium');
+    }
+    if (declared.http?.allow) {
+        capabilities.push('http');
+    }
+    if (declared.jobs?.background) {
+        capabilities.push('jobs');
+    }
+    if (declared.events?.channels) {
+        capabilities.push('events');
+    }
+    if (declared.modules?.execute) {
+        // module.execute maps to module hosting, not a registry capability
+        // of its own; observed as trivium-agnostic and skipped.
+    }
+    if (declared.agent?.run || declared.agent?.browser) {
+        capabilities.push('agent');
+    }
+    return capabilities;
+}
+function orderSources(sources) {
+    const order = ['manifest', 'session', 'observed'];
+    return order.filter((source) => sources.has(source));
+}
+
+
+/***/ },
+
 /***/ "./src/services/extension-service.ts"
 /*!*******************************************!*\
   !*** ./src/services/extension-service.ts ***!
@@ -14897,6 +15388,102 @@ function resolveRuntimeRequire() {
         return require;
     }
     return /* createRequire() */ undefined;
+}
+
+
+/***/ },
+
+/***/ "./src/services/host-capability-matrix.ts"
+/*!************************************************!*\
+  !*** ./src/services/host-capability-matrix.ts ***!
+  \************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   REGISTRY_HOSTS: () => (/* binding */ REGISTRY_HOSTS),
+/* harmony export */   capabilityLevel: () => (/* binding */ capabilityLevel),
+/* harmony export */   estimateForHost: () => (/* binding */ estimateForHost),
+/* harmony export */   matrixRowFor: () => (/* binding */ matrixRowFor)
+/* harmony export */ });
+/**
+ * Static cross-host capability matrix.
+ *
+ * Versioned data shipped with the code — never probed at runtime. Derived
+ * from docs/server/capabilities-and-isolation.md and the four-host
+ * verification recorded in research/07 (ST 1.18.0 full / Luker 2.7.0 core
+ * available but Host Bridge gated off / PureTavern 0.1.12 and TauriTavern
+ * 2.2.0 have no server-plugin infrastructure, front-end only).
+ *
+ * ST/Luker run the full server-plugin stack; PT/TT only load the browser
+ * SDK in degraded, front-end-only mode, so no server capability is available
+ * there. Host Bridge is additionally version-gated on SillyTavern
+ * (supportedPackageVersions) and rejected on Luker (console.warn only, does
+ * not block loading).
+ */
+const CORE_CAPABILITIES = [
+    'sql',
+    'kv',
+    'blob',
+    'fs',
+    'http',
+    'jobs',
+    'events',
+    'trivium',
+    'agent',
+];
+const HOST_MATRIX = {
+    sillytavern: Object.fromEntries([
+        ...CORE_CAPABILITIES.map((capability) => [capability, 'supported']),
+        ['host-bridge', 'supported'],
+    ]),
+    luker: Object.fromEntries([
+        ...CORE_CAPABILITIES.map((capability) => [capability, 'supported']),
+        ['host-bridge', 'absent'],
+    ]),
+    puretavern: Object.fromEntries(CORE_CAPABILITIES.map((capability) => [capability, 'absent'])),
+    tauritavern: Object.fromEntries(CORE_CAPABILITIES.map((capability) => [capability, 'absent'])),
+};
+/** All hosts covered by the matrix. */
+const REGISTRY_HOSTS = ['sillytavern', 'luker', 'puretavern', 'tauritavern'];
+/** Look up one capability's static support level on one host. */
+function capabilityLevel(host, capability) {
+    return HOST_MATRIX[host]?.[capability] ?? 'absent';
+}
+/**
+ * Estimate an extension's availability on one host from its dependency set:
+ * `supported` only when every dependency is supported, `absent` only when
+ * every dependency is absent, otherwise `degraded`.
+ */
+function estimateForHost(capabilities, host) {
+    if (capabilities.length === 0) {
+        return 'supported';
+    }
+    let sawSupported = false;
+    let sawAbsent = false;
+    for (const capability of capabilities) {
+        const level = capabilityLevel(host, capability);
+        if (level === 'supported') {
+            sawSupported = true;
+        }
+        else if (level === 'absent') {
+            sawAbsent = true;
+        }
+        else {
+            sawSupported = true;
+        }
+    }
+    if (sawAbsent && sawSupported) {
+        return 'degraded';
+    }
+    if (sawAbsent) {
+        return 'absent';
+    }
+    return 'supported';
+}
+/** Test-only access to the full matrix rows. */
+function matrixRowFor(host) {
+    return { ...HOST_MATRIX[host] };
 }
 
 

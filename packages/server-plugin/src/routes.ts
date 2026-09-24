@@ -53,6 +53,7 @@ import { listPrivateSqlDatabases, registerSqlRoutes } from './routes/sql-routes.
 import { registerHttpRoutes } from './routes/http-routes.js';
 import { registerHostRoutes } from './routes/host-routes.js';
 import { registerModuleRoutes } from './routes/module-routes.js';
+import { registerRegistryRoutes } from './routes/registry-routes.js';
 import { registerAgentHistoryRoutes } from './routes/agent-history-routes.js';
 import { registerAgentRoutes } from './routes/agent-routes.js';
 import { createAuthorityRuntime, type AuthorityRuntime } from './runtime.js';
@@ -778,6 +779,8 @@ export function registerRoutes(router: RouterLike, runtime = createAuthorityRunt
     registerHostRoutes(router, runtime, fail);
 
     registerModuleRoutes(router, runtime, fail);
+
+    registerRegistryRoutes(router, runtime, fail);
 
     registerHttpRoutes(router, runtime, fail);
 

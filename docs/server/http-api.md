@@ -78,6 +78,9 @@
 - `GET /extensions`
 - `GET /extensions/:id`
 - `POST /extensions/:id/grants/reset`
+- `GET /registry/extensions`
+- `GET /registry/extensions/:extensionId`
+- `POST /registry/refresh`
 
 ## 3.3 KV / Blob
 
@@ -382,6 +385,45 @@
 - 也可整扩展重置
 
 成功返回 `204`。
+
+## 4.8 插件注册表（L12 只读发现层）
+
+`GET /registry/extensions`、`GET /registry/extensions/:extensionId`、`POST /registry/refresh`
+三个端点构成 Authority 的**插件注册表**——全量已装扩展清单、能力依赖矩阵、静态冲突检测与跨宿主可用性推算的只读视图。
+
+### 鉴权与边界
+
+- 前两个 GET 端点：需要会话头 `x-authority-session-token`（与 `/session/current` 同款校验），普通用户会话即可访问。
+- `POST /registry/refresh`：**仅管理员**。先校验 `user.isAdmin`（非管理员直接 `403 {"error":"admin_required"}`，此时连会话都不会校验），再校验会话。
+- registry 是 Authority 自身的元数据，不访问任何扩展隔离数据，因此**不经过 PermissionService**，也不需要调用方声明任何权限。
+- 三个端点全部只读（refresh 只触发重扫描缓存，不改任何持久化数据），注册表**从不执行扩展代码**。
+
+### `GET /registry/extensions`
+
+返回 `RegistryListResponse`：
+
+- `records`：全量 `ExtensionRegistryRecord`（**含非 Authority 用户的普通扩展**），每项含
+  - `extensionId` / `displayName` / `version`（读扩展 `manifest.json`；读取失败时 `version` 为 `null` 并附 diagnostic）
+  - `isAuthorityUser`：有 companion module / SDK 会话历史 / declaredPermissions 记录即 `true`
+  - `dependencies`：能力依赖集，每项带 `capability` 与 `sources`（`manifest` > `session` > `observed` 去重合并，observed 只读自既有审计日志）
+  - `moduleIds` / `crossHost`（四宿主可用性推算）/ `diagnostics`
+- `count`：记录数
+- `generatedAt`：本快照的扫描时间（ISO）
+- `conflicts`：全量静态冲突列表，按 `severity`（`error` / `warning` / `info`）区分，`kind` 覆盖四类规则：
+  `duplicate_module_id` / `duplicate_transaction` / `protocol_mismatch` / `unsupported_capability_on_host`
+
+结果按用户隔离并缓存：每个用户一个注册表实例，各自持有扫描缓存；不缓存时首次调用触发扫描，之后命中缓存。
+
+### `GET /registry/extensions/:extensionId`
+
+返回 `RegistryGetResponse`：`record`（单扩展记录，未知 id 返回 `404 {"error":"extension_not_found"}`）+ `conflicts`（仅涉及该扩展的冲突）。
+
+### `POST /registry/refresh`
+
+管理员触发重扫描并返回 `RegistryRefreshResponse`：`{"refreshed": true, "generatedAt": "<ISO>"}`。
+扫描纪律与 companion module 发现层一致：零代码执行、不跟随符号链接、跳过 `node_modules` / `dist` / `.git` / `target`，单个扩展失败只记 diagnostic 不中断整体扫描。
+
+Security Center 的「扩展治理 → 注册表」版块即消费这组端点。
 
 ## 5. 能力接口矩阵
 

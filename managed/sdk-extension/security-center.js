@@ -12,9 +12,10 @@ import { buildStManagerBridgePayload, normalizeStManagerBridgeConfig, ST_MANAGER
 import { buildStManagerControlPayload, normalizeStManagerControlConfig, } from './security-center/st-manager-control.js';
 import { bootstrapSecurityCenter as bootstrapSecurityCenterHost, openSecurityCenter as openSecurityCenterHost, } from './security-center/host.js';
 import { renderSystemWorkbench } from './security-center/system-workbench.js';
+import { renderRegistryWorkbench } from './security-center/registry-workbench.js';
 import { workspaceFileDiffKey, } from './security-center/workspace-diff-view.js';
 const TOAST_TITLE = '权限中心';
-const PRIMARY_TAB_NAMES = ['overview', 'detail', 'databases', 'activity', 'agent', 'policies', 'updates', 'settings'];
+const PRIMARY_TAB_NAMES = ['overview', 'detail', 'databases', 'activity', 'agent', 'policies', 'registry', 'updates', 'settings'];
 const SYSTEM_VIEW_NAMES = ['runtime', 'recovery', 'migration', 'diagnostics', 'backup'];
 const AGENT_FOCUS_DATA_KEYS = ['inspectorTab', 'sessionId', 'runId', 'approvalId', 'decision', 'commitId', 'profileId', 'diffScope', 'path'];
 const MOBILE_FOCUS_DATA_KEYS = ['mobileSurface', 'extensionId', 'sessionId', 'profileId', 'commitId', 'tab', 'area'];
@@ -123,6 +124,13 @@ class SecurityCenterView {
                 workspaceDiff: null,
                 fileDiffs: new Map(),
             },
+            registry: {
+                loading: false,
+                error: null,
+                snapshot: null,
+                selectedExtensionId: null,
+                refreshing: false,
+            },
             mobile: {
                 surface: 'none',
             },
@@ -213,6 +221,11 @@ class SecurityCenterView {
             const systemFileDiff = target.closest('[data-action="system-file-diff"]');
             if (systemFileDiff?.dataset.path && isWorkspaceDiffScope(systemFileDiff.dataset.diffScope)) {
                 void this.toggleSystemFileDiff(systemFileDiff.dataset.path, systemFileDiff.dataset.diffScope);
+                return;
+            }
+            const registryAction = target.closest('[data-action^="registry-"]');
+            if (registryAction) {
+                this.handleRegistryAction(registryAction);
                 return;
             }
             const agentAction = target.closest('[data-action^="agent-"]');
@@ -2186,6 +2199,9 @@ class SecurityCenterView {
         if (tab === 'updates' && this.state.system.selectedView === 'recovery' && !this.state.system.recoveryLoaded) {
             void this.refreshSystemRecovery();
         }
+        if (tab === 'registry' && !this.state.registry.snapshot && !this.state.registry.loading) {
+            void this.refreshRegistry();
+        }
     }
     render() {
         this.renderHeader();
@@ -2197,6 +2213,7 @@ class SecurityCenterView {
         this.renderActivitySection();
         this.renderAgentSection();
         this.renderPoliciesSection();
+        this.renderRegistrySection();
         this.renderUpdatesSection();
         this.renderSettingsSection();
         this.toggleSections();
@@ -2429,6 +2446,77 @@ class SecurityCenterView {
             ? renderSystemWorkbench(this.state)
             : '<div class="authority-empty">只有管理员可以使用这里的维护、备份和迁移功能。</div>';
         this.renderMobilePresentation();
+    }
+    renderRegistrySection() {
+        const container = this.root.querySelector('[data-role="registry-view"]');
+        if (!container) {
+            return;
+        }
+        container.innerHTML = renderRegistryWorkbench(this.state.registry, { isAdmin: this.state.isAdmin });
+    }
+    getRequiredRegistrySessionToken() {
+        return this.state.session?.sessionToken ?? null;
+    }
+    async loadRegistrySnapshot(options = {}) {
+        const sessionToken = this.getRequiredRegistrySessionToken();
+        if (!sessionToken) {
+            throw new Error('Security Center session is not initialized');
+        }
+        if (options.forceRefresh && this.state.isAdmin) {
+            await authorityRequest('/registry/refresh', {
+                method: 'POST',
+                body: {},
+                sessionToken,
+            });
+        }
+        return await authorityRequest('/registry/extensions', { sessionToken });
+    }
+    async refreshRegistry(options = {}) {
+        if (this.state.registry.refreshing) {
+            return;
+        }
+        this.state.registry.loading = true;
+        this.state.registry.error = null;
+        if (options.forceRefresh) {
+            this.state.registry.refreshing = true;
+        }
+        this.renderRegistrySection();
+        try {
+            this.state.registry.snapshot = await this.loadRegistrySnapshot(options);
+        }
+        catch (error) {
+            this.state.registry.error = getSystemMessageLabel(error instanceof Error ? error.message : String(error));
+            if (options.forceRefresh) {
+                toastr.error(this.state.registry.error, TOAST_TITLE);
+            }
+        }
+        finally {
+            this.state.registry.loading = false;
+            this.state.registry.refreshing = false;
+            this.renderRegistrySection();
+        }
+    }
+    handleRegistryAction(element) {
+        switch (element.dataset.action) {
+            case 'registry-refresh':
+                void this.refreshRegistry({ forceRefresh: true });
+                return;
+            case 'registry-select-record': {
+                const extensionId = element.dataset.extensionId;
+                if (extensionId) {
+                    this.state.registry.selectedExtensionId = extensionId;
+                    this.renderRegistrySection();
+                    this.playSurfaceEntrance('[data-role="registry-view"] > :first-child');
+                }
+                return;
+            }
+            case 'registry-back':
+                this.state.registry.selectedExtensionId = null;
+                this.renderRegistrySection();
+                return;
+            default:
+                return;
+        }
     }
     getRequiredSessionToken() {
         const sessionToken = this.state.session?.sessionToken;
