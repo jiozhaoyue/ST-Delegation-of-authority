@@ -24,6 +24,12 @@ These guides help you **ask the right questions before coding**.
 | [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md) | Identify patterns and reduce duplication | When you notice repeated patterns |
 | [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md) | Think through data flow across layers | Features spanning multiple layers |
 
+### Project Conventions（工程约定，非思考触发器）
+
+| 规范 | 内容 | 何时读 |
+|------|------|--------|
+| [Trellis 管理文件：保持上游默认](./trellis-managed-files.md) | `.trellis/agents/*`、`.codex/agents/*`、`.trellis/workflow.md`、`.codex/config.toml` 不写项目定制；定制落点表 + `trellis update --dry-run` 自检 | 准备改 `.trellis/` / `.codex/` 下任何文件之前 |
+
 ---
 
 ## Quick Reference: Thinking Triggers
