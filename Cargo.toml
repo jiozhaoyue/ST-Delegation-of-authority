@@ -1,3 +1,18 @@
 [workspace]
 members = ["crates/authority-core"]
 resolver = "2"
+
+# 产物加固：strip 掉符号表。
+#
+# 背景（2026-09-25 实测）：本机 Rust 为 GNU/MinGW 工具链（x86_64-pc-windows-gnu），
+# 其 release 默认【保留】COFF 符号表 —— 实测占产物 33%（5,856,127 字节 / 60,583 个符号名），
+# 使 Windows 产物从 ~10.3MB 膨胀到 ~17.7MB。上游 CI 用 MSVC，本就无符号表。
+#
+# `strip = "symbols"` 在两种工具链下都安全且有意义：
+#   - MSVC 产物本无符号表 → 无变化；
+#   - GNU 产物被压掉符号表 → 体积回落，且与 CI 产物更接近。
+#
+# 注意：本机若要用与 CI 完全同源的产物，仍需装 MSVC 目标
+# （rustup target add x86_64-pc-windows-msvc + VS Build Tools C++ 工作负载）。
+[profile.release]
+strip = "symbols"

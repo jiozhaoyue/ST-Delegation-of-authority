@@ -5,7 +5,7 @@
   "sdkVersion": "1.6.8",
   "assetHash": "313edb55b5b88da43b677fe727a7646f399d8b72ba3aba10437f3de499887c27",
   "coreVersion": "1.6.8",
-  "coreArtifactHash": "fb0075520d0a032e398787a3965801b298474160594f64446683b157ec78d780",
+  "coreArtifactHash": "476976436dd5c0b44c5f20c47e4174281260611a8508094689378d6e373e96ec",
   "coreArtifactPlatform": "linux-x64",
   "coreArtifactPlatforms": [
     "android-arm64",
@@ -48,12 +48,12 @@
       "platform": "win32",
       "arch": "x64",
       "binaryName": "authority-core.exe",
-      "binarySha256": "1aac5f6f1f6d8e165d62b133e8bb155647c4c0ef77e644ea9c0f84d76bec98a2",
-      "artifactHash": "05fdb2806acea7ddbcd94cbeeb21ce76305c1fc20df0f2dc0aaeaf295970cb28"
+      "binarySha256": "1f5f78258bb7b258673aaa2c0c5263b2d8b2aab11656d6aa93adbaf09b6de480",
+      "artifactHash": "9ea3883926f640a2eec083cdc4588278d5a4e53cc2c7f1c0d07a1e8110ad1ff9"
     }
   },
   "coreBinarySha256": "843a262cb38243e3387532ae546f4c67d5524163726a859e0cc1def98ad00941",
   "hostBridgeVersion": "1.1.1",
   "hostBridgeArtifactHash": "a8a9f80dad2d9adb47cf5d541943b74a6e9ac05ffb67edb8fb138916f22ed080",
-  "buildTime": "2026-09-24T14:52:51.713Z"
+  "buildTime": "2026-09-25T08:37:02.065Z"
 }
