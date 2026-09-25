@@ -88,3 +88,4 @@ npm run bench:scale
 | [Quality Guidelines](./quality-guidelines.md) | route 编写规范与禁区索引 | 已填实 |
 | [Logging Guidelines](./logging-guidelines.md) | 审计日志与 console 约定 | 已填实 |
 | [Registry Guidelines](./registry-guidelines.md) | 插件注册表（L12 只读发现层）：扫描纪律、缓存、冲突规则、宿主矩阵 | 已填实 |
+| [Version Binding](./version-binding.md) | **版本绑定与公开面兼容（跨仓规范）**：版本面现状、能力集声明契约、返回形状固化清单、`protocolVersion` 兼容窗口、消费者改造点 | 已填实 |

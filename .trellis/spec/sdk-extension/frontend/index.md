@@ -75,3 +75,4 @@ npm run sync:installable && npm run check:installable
 | [State Management](./state-management.md) | 主类状态 + 视图模型 | 已填实 |
 | [Quality Guidelines](./quality-guidelines.md) | CSS 作用域与 UI 质量规范 | 已填实 |
 | [Type Safety](./type-safety.md) | DTO 到视图模型的类型链 | 已填实 |
+| [Consumer Contract](./consumer-contract.md) | **消费者接入契约（跨仓规范）**：16 仓消费者盘点、可照抄的最小正确示例、`declaredPermissions` 合法形态表、降级最小必需行为、6 项已知偏离项 | 已填实 |

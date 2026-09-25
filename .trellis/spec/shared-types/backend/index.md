@@ -72,3 +72,4 @@ npm run sync:installable && npm run check:installable
 | [Error Handling](./error-handling.md) | `AuthorityErrorPayload` 合同 | 已填实 |
 | [Quality Guidelines](./quality-guidelines.md) | 类型质量规范 | 已填实 |
 | [Logging Guidelines](./logging-guidelines.md) | 不适用声明 | 已填实 |
+| [Capability Lifecycle](./capability-lifecycle.md) | **能力生命周期与登记真源（跨层规范）**：4 态阶段模型、五套词汇表的收敛、三条漂移断言 A1/A2/A3、废弃流程与过渡期 | 已填实 |
