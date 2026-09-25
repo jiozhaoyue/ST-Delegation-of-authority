@@ -137,6 +137,14 @@ interface AuthorityCapabilityEntry {
 | **A2** | 对全部 11 项 `PermissionResource` 构造 `DeclaredPermissions`，断言 `capabilitiesFromDeclaredPermissions()` 输出 == 真源的 `registryName` 投影 | ④ 的映射与真源脱节 |
 | **A3** | 真源的 `featurePath` 集合（去 null）== `AuthorityFeaturePath` union 成员集合 | **§1.1 的既有漂移**（26 vs 32 缺 6 项） |
 
+> **A3 的定位（2026-09-25 实测后修正）**：A3 是**双保险**，不是唯一防线。
+> 实测：向 `AuthorityFeaturePath` 新增成员而漏加 `getFeatureAvailability()` 的 switch `case` 时，
+> `tsc -b packages/sdk-extension` 报 **`error TS2366: Function lacks ending return statement and return type
+> does not include 'undefined'`** ——**编译期已能拦住**"漏加 case"（不依赖 `noImplicitReturns`，
+> 因为函数声明返回 `boolean`、union 未全覆盖时 TS 判定末尾可达）。
+> A3 补的是编译期抓不到的形态：**加了 `case` 但路径名与真源不一致**（如真源 `host.eventLedger`
+> vs switch `host.event-ledger`）。
+
 ### 4.1 挂载位置（复用既有质量门，不新建管线）
 
 作为 `packages/shared-types` 或 `packages/server-plugin` 的**既有测试文件内的新 `it()`**。
