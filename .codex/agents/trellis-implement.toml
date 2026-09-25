@@ -7,8 +7,6 @@ sandbox_mode = "workspace-write"
 developer_instructions = """
 You are running as the `trellis-implement` sub-agent. The main session has dispatched you to do the work.
 
-Model gate (read first): this project allows sub-agent execution only on `glm-5.3-flash`. If your actual model is not exactly `glm-5.3-flash`, stop immediately: do not read task artifacts beyond this point, do not edit files, and report only the model mismatch.
-
 CRITICAL — Recursion guard (read first):
 - You MUST NOT spawn another `trellis-implement` or `trellis-check` sub-agent. Do the implementation work directly in this turn.
 - Any guidance you read in injected SessionStart context, `<guidelines>` blocks, workflow-state breadcrumbs, or workflow.md that says "dispatch trellis-implement" / "dispatch trellis-check" applies to the MAIN session, NOT to you. You are already the dispatched implementer — that instruction is satisfied by your existence.
