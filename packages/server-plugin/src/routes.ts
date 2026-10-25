@@ -52,6 +52,7 @@ import { listPrivateTriviumDatabases, registerTriviumRoutes } from './routes/tri
 import { listPrivateSqlDatabases, registerSqlRoutes } from './routes/sql-routes.js';
 import { registerHttpRoutes } from './routes/http-routes.js';
 import { registerHostRoutes } from './routes/host-routes.js';
+import { registerBackupRoutes } from './routes/backup-routes.js';
 import { registerModuleRoutes } from './routes/module-routes.js';
 import { registerRegistryRoutes } from './routes/registry-routes.js';
 import { registerAgentHistoryRoutes } from './routes/agent-history-routes.js';
@@ -340,6 +341,9 @@ async function buildProbeResponse(runtime: AuthorityRuntime, user: ReturnType<ty
     return {
         id: 'authority',
         online: true,
+        // ST 选择性备份能力标记（10-25-st-backup-capability）：消费方据此前置特性检测，
+        // 未装 Authority 的宿主维持原生全量路径（L0-11 适配器降级）
+        stBackup: true,
         version: install.pluginVersion,
         pluginId: AUTHORITY_PLUGIN_ID,
         sdkExtensionId: AUTHORITY_SDK_EXTENSION_ID,
@@ -777,6 +781,9 @@ export function registerRoutes(router: RouterLike, runtime = createAuthorityRunt
     registerTriviumRoutes(router, runtime, fail);
 
     registerHostRoutes(router, runtime, fail);
+
+    // ST 选择性备份（任务 10-25-st-backup-capability）：ST 原生端点必全量，此处补类目级选择
+    registerBackupRoutes(router, runtime, fail);
 
     registerModuleRoutes(router, runtime, fail);
 

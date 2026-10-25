@@ -45,8 +45,8 @@ export interface AuthorityResponse {
     json(data: unknown): void;
     send(data?: unknown): void;
     setHeader(name: string, value: string): void;
-    write(chunk: string): void;
-    end(chunk?: string): void;
+    write(chunk: string | Buffer | Uint8Array): void;
+    end(chunk?: string | Buffer): void;
     on?(event: string, listener: () => void): void;
     sendStatus?(code: number): void;
 }

@@ -145,6 +145,8 @@ export interface AuthorityProbeCoreStatus {
 export interface AuthorityProbeResponse {
     id: string;
     online: boolean;
+    /** ST 选择性备份能力标记（10-25-st-backup-capability）：消费方据此前置特性检测 */
+    stBackup?: boolean;
     version: string;
     pluginId: string;
     sdkExtensionId: string;
