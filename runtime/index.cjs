@@ -225,6 +225,11 @@ function buildAuthorityFeatureFlags(isAdmin, moduleCount = 0) {
             eventLedger: true,
             moduleContext: true,
         },
+        // 扩展管理能力组（ext-mgmt 路由组，PR-1 底座 + PR-2 rebuildUpdate）。
+        // 能力存在即标记 true（与 stBackup 同语义）；端点层仍有 assertAdminUser 门禁。
+        extMgmt: {
+            rebuildUpdate: true,
+        },
     };
 }
 
@@ -349,12 +354,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _routes_sql_routes_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./routes/sql-routes.js */ "./src/routes/sql-routes.ts");
 /* harmony import */ var _routes_http_routes_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./routes/http-routes.js */ "./src/routes/http-routes.ts");
 /* harmony import */ var _routes_host_routes_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./routes/host-routes.js */ "./src/routes/host-routes.ts");
-/* harmony import */ var _routes_module_routes_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./routes/module-routes.js */ "./src/routes/module-routes.ts");
-/* harmony import */ var _routes_registry_routes_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./routes/registry-routes.js */ "./src/routes/registry-routes.ts");
-/* harmony import */ var _routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./routes/agent-history-routes.js */ "./src/routes/agent-history-routes.ts");
-/* harmony import */ var _routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./routes/agent-routes.js */ "./src/routes/agent-routes.ts");
-/* harmony import */ var _runtime_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./runtime.js */ "./src/runtime.ts");
-/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./utils.js */ "./src/utils.ts");
+/* harmony import */ var _routes_backup_routes_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./routes/backup-routes.js */ "./src/routes/backup-routes.ts");
+/* harmony import */ var _routes_ext_mgmt_routes_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./routes/ext-mgmt-routes.js */ "./src/routes/ext-mgmt-routes.ts");
+/* harmony import */ var _routes_module_routes_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./routes/module-routes.js */ "./src/routes/module-routes.ts");
+/* harmony import */ var _routes_registry_routes_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./routes/registry-routes.js */ "./src/routes/registry-routes.ts");
+/* harmony import */ var _routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./routes/agent-history-routes.js */ "./src/routes/agent-history-routes.ts");
+/* harmony import */ var _routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./routes/agent-routes.js */ "./src/routes/agent-routes.ts");
+/* harmony import */ var _runtime_js__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./runtime.js */ "./src/runtime.ts");
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./utils.js */ "./src/utils.ts");
+
+
 
 
 
@@ -378,7 +387,7 @@ function ok(res, data) {
 function fail(runtime, req, res, extensionId, error) {
     const normalized = normalizeAuthorityError(error);
     try {
-        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
         if (normalized.payload.category === 'permission' && isPermissionErrorDetails(normalized.payload.details)) {
             void runtime.audit.logPermission(user, extensionId, 'Permission denied', {
                 ...normalized.payload.details,
@@ -403,7 +412,7 @@ function buildPermissionErrorPayload(message) {
         return null;
     }
     const target = match[2]?.trim();
-    const descriptor = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.buildPermissionDescriptor)(resource, target);
+    const descriptor = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.buildPermissionDescriptor)(resource, target);
     return {
         error: message,
         code: 'permission_not_granted',
@@ -438,13 +447,13 @@ function isPermissionErrorDetails(value) {
         && 'riskLevel' in value;
 }
 function normalizeAuthorityError(error) {
-    if ((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.isAuthorityServiceError)(error)) {
+    if ((0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.isAuthorityServiceError)(error)) {
         return {
             status: error.status,
             payload: error.toPayload(),
         };
     }
-    const message = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.asErrorMessage)(error);
+    const message = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.asErrorMessage)(error);
     const permissionErrorPayload = buildPermissionErrorPayload(message);
     if (permissionErrorPayload) {
         return {
@@ -606,6 +615,9 @@ async function buildProbeResponse(runtime, user) {
     return {
         id: 'authority',
         online: true,
+        // ST 选择性备份能力标记（10-25-st-backup-capability）：消费方据此前置特性检测，
+        // 未装 Authority 的宿主维持原生全量路径（L0-11 适配器降级）
+        stBackup: true,
         version: install.pluginVersion,
         pluginId: _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_PLUGIN_ID,
         sdkExtensionId: _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID,
@@ -833,15 +845,15 @@ function shouldRedactDiagnosticKey(key) {
         || normalized.includes('token')
         || normalized.includes('secret');
 }
-function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODULE_14__.createAuthorityRuntime)()) {
+function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODULE_16__.createAuthorityRuntime)()) {
     router.post('/probe', async (req, res) => {
-        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
         ok(res, await buildProbeResponse(runtime, user));
     });
     (0,_routes_st_manager_routes_js__WEBPACK_IMPORTED_MODULE_3__.registerStManagerRoutes)(router, runtime, fail);
     router.post('/session/init', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             const config = (req.body ?? {});
             const session = await runtime.sessions.createSession(user, config);
             const grants = await runtime.permissions.listPersistentGrants(user, session.extension.id);
@@ -856,8 +868,8 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/session/current', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getSessionToken)(req), user);
             const limits = await runtime.permissions.getEffectiveSessionLimits(user, session.extension.id);
             ok(res, runtime.sessions.buildSessionResponse(session, await runtime.permissions.listPersistentGrants(user, session.extension.id), await runtime.permissions.getPolicyEntries(user, session.extension.id), limits, runtime.modules.visibleCount()));
         }
@@ -867,8 +879,8 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/permissions/evaluate', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getSessionToken)(req), user);
             const evaluation = await runtime.permissions.evaluate(user, session, req.body);
             if (evaluation.decision === 'denied' || evaluation.decision === 'blocked') {
                 await runtime.audit.logPermission(user, session.extension.id, 'Permission denied', {
@@ -886,11 +898,11 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/permissions/evaluate-batch', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getSessionToken)(req), user);
             const payload = (req.body ?? {});
             if (payload.requests !== undefined && !Array.isArray(payload.requests)) {
-                throw new _utils_js__WEBPACK_IMPORTED_MODULE_15__.AuthorityServiceError('Permission batch requests must be an array', 400, 'validation_error', 'validation');
+                throw new _utils_js__WEBPACK_IMPORTED_MODULE_17__.AuthorityServiceError('Permission batch requests must be an array', 400, 'validation_error', 'validation');
             }
             const results = await runtime.permissions.evaluateBatch(user, session, payload.requests ?? []);
             const response = { results };
@@ -902,8 +914,8 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/permissions/resolve', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getSessionToken)(req), user);
             const payload = req.body;
             const grant = await runtime.permissions.resolve(user, session, payload, payload.choice);
             await runtime.audit.logPermission(user, session.extension.id, grant.status === 'denied' ? 'Permission denied' : 'Permission granted', {
@@ -920,7 +932,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/extensions', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             const list = await Promise.all((await runtime.extensions.listExtensions(user)).map(async (extension) => {
                 const grants = await runtime.permissions.listPersistentGrants(user, extension.id);
                 const sqlDatabases = (await (0,_routes_sql_routes_js__WEBPACK_IMPORTED_MODULE_7__.listPrivateSqlDatabases)(runtime, user, extension.id)).databases;
@@ -940,7 +952,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/extensions/:id', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             const extensionId = decodeURIComponent(req.params?.id ?? '');
             const extension = await runtime.extensions.getExtension(user, extensionId);
             if (!extension) {
@@ -968,7 +980,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/extensions/:id/grants/reset', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             const extensionId = decodeURIComponent(req.params?.id ?? '');
             await runtime.permissions.resetPersistentGrants(user, extensionId, req.body?.keys);
             await runtime.audit.logPermission(user, extensionId, 'Persistent grants reset', {
@@ -989,15 +1001,19 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     (0,_routes_sql_routes_js__WEBPACK_IMPORTED_MODULE_7__.registerSqlRoutes)(router, runtime, fail);
     (0,_routes_trivium_routes_js__WEBPACK_IMPORTED_MODULE_6__.registerTriviumRoutes)(router, runtime, fail);
     (0,_routes_host_routes_js__WEBPACK_IMPORTED_MODULE_9__.registerHostRoutes)(router, runtime, fail);
-    (0,_routes_module_routes_js__WEBPACK_IMPORTED_MODULE_10__.registerModuleRoutes)(router, runtime, fail);
-    (0,_routes_registry_routes_js__WEBPACK_IMPORTED_MODULE_11__.registerRegistryRoutes)(router, runtime, fail);
+    // ST 选择性备份（任务 10-25-st-backup-capability）：ST 原生端点必全量，此处补类目级选择
+    (0,_routes_backup_routes_js__WEBPACK_IMPORTED_MODULE_10__.registerBackupRoutes)(router, runtime, fail);
+    // 扩展管理（ext-mgmt，PR-1 底座 + PR-2 rebuildUpdate）：仅管理员，能力探测走 probe features.extMgmt
+    (0,_routes_ext_mgmt_routes_js__WEBPACK_IMPORTED_MODULE_11__.registerExtMgmtRoutes)(router, runtime, fail);
+    (0,_routes_module_routes_js__WEBPACK_IMPORTED_MODULE_12__.registerModuleRoutes)(router, runtime, fail);
+    (0,_routes_registry_routes_js__WEBPACK_IMPORTED_MODULE_13__.registerRegistryRoutes)(router, runtime, fail);
     (0,_routes_http_routes_js__WEBPACK_IMPORTED_MODULE_8__.registerHttpRoutes)(router, runtime, fail);
     (0,_routes_jobs_events_routes_js__WEBPACK_IMPORTED_MODULE_5__.registerJobsAndEventsRoutes)(router, runtime, fail);
-    (0,_routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_12__.registerAgentHistoryRoutes)(router, runtime, fail);
-    (0,_routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_13__.registerAgentRoutes)(router, runtime, fail);
+    (0,_routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_14__.registerAgentHistoryRoutes)(router, runtime, fail);
+    (0,_routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_15__.registerAgentRoutes)(router, runtime, fail);
     router.get('/admin/policies', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             if (!user.isAdmin) {
                 throw new Error('Forbidden');
             }
@@ -1009,7 +1025,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/policies', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             const result = await runtime.policies.saveGlobalPolicies(user, req.body ?? {});
             await runtime.audit.logUsage(user, 'third-party/st-authority-sdk', 'Policies updated');
             ok(res, result);
@@ -1020,7 +1036,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/usage-summary', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, await buildUsageSummary(runtime, user));
         }
@@ -1030,7 +1046,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/import-export/operations', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, {
                 operations: runtime.adminPackages.listOperations(user),
@@ -1042,7 +1058,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/export', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             const operation = runtime.adminPackages.startExport(user, (req.body ?? {}));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Export package started', {
@@ -1057,7 +1073,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/import-transfer/init', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, await runtime.transfers.init(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, {
                 resource: 'fs.private',
@@ -1070,7 +1086,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/import', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             const payload = (req.body ?? {});
             const transfer = runtime.transfers.get(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, String(payload.transferId ?? ''), 'fs.private');
@@ -1089,7 +1105,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/operations/:id/resume', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             const operation = runtime.adminPackages.resume(user, String(req.params?.id ?? ''));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Import/export operation resumed', {
@@ -1104,7 +1120,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/operations/:id/open-download', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             const artifact = runtime.adminPackages.getArtifact(user, String(req.params?.id ?? ''));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Import/export artifact opened', {
@@ -1119,7 +1135,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/native-migration/operations', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, {
                 operations: runtime.nativeMigrations.listOperations(),
@@ -1131,7 +1147,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/upload/init', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             const sizeBytes = parseNativeMigrationSizeBytes(req.body?.sizeBytes);
             ok(res, await runtime.transfers.init(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, {
@@ -1145,7 +1161,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/preview', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             const payload = (req.body ?? {});
             const transfer = runtime.transfers.get(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, String(payload.transferId ?? ''), 'fs.private');
@@ -1168,7 +1184,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/operations/:id/apply', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             const payload = (req.body ?? {});
             const operation = await runtime.nativeMigrations.apply(String(req.params?.id ?? ''), payload.mode ?? 'skip');
@@ -1188,7 +1204,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/operations/:id/rollback', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             const operation = runtime.nativeMigrations.rollback(String(req.params?.id ?? ''));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Native migration rolled back', {
@@ -1203,7 +1219,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/diagnostic-bundle', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, await buildDiagnosticBundle(runtime, user));
         }
@@ -1213,7 +1229,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/diagnostic-bundle/archive', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             assertAdminUser(user);
             const artifact = runtime.adminPackages.createDiagnosticArchive(user, await buildDiagnosticBundle(runtime, user));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Diagnostic archive created', {
@@ -1228,7 +1244,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/update', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.getUserContext)(req);
             if (!user.isAdmin) {
                 throw new Error('Forbidden');
             }
@@ -1281,9 +1297,9 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
                         : `更新失败后后台服务状态为 ${recovery.state}。`;
                 }
                 catch (recoveryError) {
-                    recoveryMessage = `更新失败且后台服务恢复失败：${(0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.asErrorMessage)(recoveryError)}`;
+                    recoveryMessage = `更新失败且后台服务恢复失败：${(0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.asErrorMessage)(recoveryError)}`;
                 }
-                throw new Error(`${(0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.asErrorMessage)(error)} ${recoveryMessage}`.trim());
+                throw new Error(`${(0,_utils_js__WEBPACK_IMPORTED_MODULE_17__.asErrorMessage)(error)} ${recoveryMessage}`.trim());
             }
         }
         catch (error) {
@@ -2084,6 +2100,349 @@ function withAuthorityAdmin(runtime, fail, handler) {
             fail(runtime, req, res, extensionId, error);
         }
     };
+}
+
+
+/***/ },
+
+/***/ "./src/routes/backup-routes.ts"
+/*!*************************************!*\
+  !*** ./src/routes/backup-routes.ts ***!
+  \*************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   registerBackupRoutes: () => (/* binding */ registerBackupRoutes)
+/* harmony export */ });
+/* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:fs/promises */ "node:fs/promises");
+/* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_fs_promises__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _constants_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../constants.js */ "./src/constants.ts");
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils.js */ "./src/utils.ts");
+
+
+
+
+/** ST 标准类目 → 用户数据根下的路径（目录或单文件）。空数组占位=该类目无对应路径。 */
+const CATEGORY_PATHS = {
+    characters: ['characters'],
+    chats: ['chats'],
+    lorebooks: ['worlds'],
+    presets: ['OpenAI Settings', 'KoboldAI Settings', 'NovelAI Settings', 'TextGen Settings', 'context', 'instruct', 'sysprompt', 'reasoning', 'QuickReplies'],
+    settings: ['settings.json'],
+    secrets: ['secrets.json'],
+    assets: ['User Avatars', 'backgrounds', 'themes'],
+    extensions: ['extensions'],
+    globalExtensions: [],
+    vectors: ['vectors'],
+};
+/** CRC-32（IEEE 802.3，查表法）——stored zip 条目的必要校验 */
+const CRC_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < 256; i += 1) {
+        let c = i;
+        for (let k = 0; k < 8; k += 1)
+            c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        table[i] = c >>> 0;
+    }
+    return table;
+})();
+function crc32(buf, seed = 0) {
+    let c = (seed ^ 0xffffffff) >>> 0;
+    for (let i = 0; i < buf.length; i += 1)
+        c = ((CRC_TABLE[(c ^ buf[i]) & 0xff] ?? 0) ^ (c >>> 8)) >>> 0;
+    return (c ^ 0xffffffff) >>> 0;
+}
+/** 收集一个类目路径（目录递归 / 单文件直收）下全部文件；不存在则静默跳过（该类目为空） */
+async function collectFiles(absRoot, relPath, out) {
+    const abs = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(absRoot, relPath);
+    let stat;
+    try {
+        stat = await node_fs_promises__WEBPACK_IMPORTED_MODULE_0___default().stat(abs);
+    }
+    catch {
+        return; // 类目路径不存在 = 该类目为空
+    }
+    if (stat.isFile()) {
+        out.push({ rel: relPath, abs });
+        return;
+    }
+    if (!stat.isDirectory())
+        return;
+    let dirEntries;
+    try {
+        dirEntries = await node_fs_promises__WEBPACK_IMPORTED_MODULE_0___default().readdir(abs, { withFileTypes: true });
+    }
+    catch {
+        return;
+    }
+    for (const d of dirEntries) {
+        if (d.name === '.git' || d.name === 'node_modules')
+            continue;
+        const rel = `${relPath}/${d.name}`;
+        if (d.isDirectory())
+            await collectFiles(absRoot, rel, out);
+        else if (d.isFile())
+            out.push({ rel, abs: node_path__WEBPACK_IMPORTED_MODULE_1___default().join(absRoot, rel) });
+    }
+}
+function dosDateTime(date) {
+    const time = ((date.getHours() & 0x1f) << 11) | ((date.getMinutes() & 0x3f) << 5) | ((Math.floor(date.getSeconds() / 2)) & 0x1f);
+    const d = (((date.getFullYear() - 1980) & 0x7f) << 9) | (((date.getMonth() + 1) & 0x0f) << 5) | (date.getDate() & 0x1f);
+    return { time, date: d };
+}
+function localHeader(nameBuf, crc, size, { time, date }) {
+    const h = Buffer.alloc(30);
+    h.writeUInt32LE(0x04034b50, 0); // signature
+    h.writeUInt16LE(20, 4); // version needed
+    h.writeUInt16LE(0, 6); // flags
+    h.writeUInt16LE(0, 8); // method: stored
+    h.writeUInt16LE(time, 10);
+    h.writeUInt16LE(date, 12);
+    h.writeUInt32LE(crc, 14);
+    h.writeUInt32LE(size, 18); // compressed
+    h.writeUInt32LE(size, 22); // uncompressed
+    h.writeUInt16LE(nameBuf.length, 26);
+    h.writeUInt16LE(0, 28); // extra len
+    return h;
+}
+function centralRecord(meta, { time, date }) {
+    const nameBuf = Buffer.from(meta.name, 'utf8');
+    const h = Buffer.alloc(46);
+    h.writeUInt32LE(0x02014b50, 0);
+    h.writeUInt16LE(20, 4); // version made by
+    h.writeUInt16LE(20, 6); // version needed
+    h.writeUInt16LE(0, 8);
+    h.writeUInt16LE(0, 10); // stored
+    h.writeUInt16LE(time, 12);
+    h.writeUInt16LE(date, 14);
+    h.writeUInt32LE(meta.crc, 16);
+    h.writeUInt32LE(meta.size, 20);
+    h.writeUInt32LE(meta.size, 24);
+    h.writeUInt16LE(nameBuf.length, 28);
+    h.writeUInt16LE(0, 30); // extra
+    h.writeUInt16LE(0, 32); // comment
+    h.writeUInt16LE(0, 34); // disk
+    h.writeUInt16LE(0, 36); // internal attrs
+    h.writeUInt32LE(0, 38); // external attrs
+    h.writeUInt32LE(meta.offset, 42);
+    return Buffer.concat([h, nameBuf]);
+}
+function endRecord(count, cdSize, cdOffset) {
+    const h = Buffer.alloc(22);
+    h.writeUInt32LE(0x06054b50, 0);
+    h.writeUInt16LE(0, 4);
+    h.writeUInt16LE(0, 6);
+    h.writeUInt16LE(count, 8);
+    h.writeUInt16LE(count, 10);
+    h.writeUInt32LE(cdSize, 12);
+    h.writeUInt32LE(cdOffset, 16);
+    h.writeUInt16LE(0, 20);
+    return h;
+}
+function registerBackupRoutes(router, runtime, fail) {
+    router.post('/host/st-backup', async (req, res) => {
+        const extensionId = _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID;
+        try {
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_3__.getUserContext)(req);
+            await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_3__.getSessionToken)(req), user);
+            const selection = (req.body && typeof req.body.selection === 'object' && req.body.selection)
+                ? req.body.selection : {};
+            const known = Object.keys(CATEGORY_PATHS);
+            const chosen = known.filter((k) => selection[k] === true);
+            if (chosen.length === 0) {
+                res.status(400).json({ error: 'At least one backup category must be selected.', code: 'bad-request' });
+                return;
+            }
+            const rootDir = String(user.directories?.root ?? user.rootDir ?? '');
+            if (!rootDir) {
+                res.status(500).json({ error: 'Host user data root unavailable.', code: 'internal' });
+                return;
+            }
+            const files = [];
+            for (const category of chosen) {
+                for (const rel of CATEGORY_PATHS[category] ?? []) {
+                    await collectFiles(String(rootDir), rel, files);
+                }
+            }
+            // 流式写出 stored zip：逐文件 local header + 分块数据；最后集中 central directory
+            res.setHeader('Content-Type', 'application/zip');
+            res.setHeader('Content-Disposition', `attachment; filename="${user.handle}-selective.zip"`);
+            res.setHeader('Transfer-Encoding', 'chunked');
+            const stamp = dosDateTime(new Date());
+            const metas = [];
+            let offset = 0;
+            for (const file of files) {
+                const stat = await node_fs_promises__WEBPACK_IMPORTED_MODULE_0___default().stat(file.abs);
+                const nameBuf = Buffer.from(file.rel, 'utf8');
+                const crc = crc32(await node_fs_promises__WEBPACK_IMPORTED_MODULE_0___default().readFile(file.abs)); // 读一次算 CRC（文件级驻留；
+                // 类目资产多为中小文件；超大单文件优化留待需要时改两遍流式）
+                const header = localHeader(nameBuf, crc, stat.size, stamp);
+                res.write(header);
+                res.write(nameBuf);
+                await new Promise((resolve, reject) => {
+                    const stream = (__webpack_require__(/*! node:fs */ "node:fs").createReadStream)(file.abs, { highWaterMark: 1 << 20 });
+                    stream.on('data', (chunk) => { res.write(chunk); });
+                    stream.on('end', () => resolve());
+                    stream.on('error', reject);
+                });
+                metas.push({ name: file.rel, crc, size: stat.size, offset });
+                offset += header.length + nameBuf.length + stat.size;
+            }
+            const cdOffset = offset;
+            let cdSize = 0;
+            for (const meta of metas) {
+                const rec = centralRecord(meta, stamp);
+                res.write(rec);
+                cdSize += rec.length;
+            }
+            res.write(endRecord(metas.length, cdSize, cdOffset));
+            res.end();
+        }
+        catch (error) {
+            fail(runtime, req, res, extensionId, error);
+        }
+    });
+}
+
+
+/***/ },
+
+/***/ "./src/routes/ext-mgmt-routes.ts"
+/*!***************************************!*\
+  !*** ./src/routes/ext-mgmt-routes.ts ***!
+  \***************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   registerExtMgmtRoutes: () => (/* binding */ registerExtMgmtRoutes)
+/* harmony export */ });
+/* harmony import */ var _constants_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../constants.js */ "./src/constants.ts");
+/* harmony import */ var _services_ext_mgmt_service_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../services/ext-mgmt-service.js */ "./src/services/ext-mgmt-service.ts");
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils.js */ "./src/utils.ts");
+
+
+
+function assertAdminUser(user) {
+    if (!user.isAdmin) {
+        throw new Error('Forbidden');
+    }
+}
+function parseTarget(body) {
+    const raw = body?.target;
+    if (!raw || typeof raw !== 'object') {
+        throw new _services_ext_mgmt_service_js__WEBPACK_IMPORTED_MODULE_1__.ExtMgmtServiceError('ext_mgmt_invalid_target', 'validation', 'ext_mgmt_invalid_target', '请求缺少 target（{ location, name }）。', 'target.location 取 third-party / plugins / user-extensions 之一；target.name 是目录名。');
+    }
+    const candidate = raw;
+    return {
+        location: candidate.location,
+        name: typeof candidate.name === 'string' ? candidate.name : '',
+    };
+}
+/**
+ * 三段式响应 + 审计。机器码同时落在 error 与 code 字段（error 按契约承载机器码，
+ * code 保留既有 SDK 错误分类路径）；非 ext-mgmt 错误回落统一 fail()。
+ */
+function failExtMgmt(runtime, req, res, fail, error) {
+    if (!(0,_services_ext_mgmt_service_js__WEBPACK_IMPORTED_MODULE_1__.isExtMgmtServiceError)(error)) {
+        fail(runtime, req, res, _constants_js__WEBPACK_IMPORTED_MODULE_0__.AUTHORITY_SDK_EXTENSION_ID, error);
+        return;
+    }
+    const status = (0,_services_ext_mgmt_service_js__WEBPACK_IMPORTED_MODULE_1__.statusFromExtMgmtErrorKind)(error.kind);
+    const payload = {
+        error: error.errorCode,
+        code: error.errorCode,
+        category: (0,_services_ext_mgmt_service_js__WEBPACK_IMPORTED_MODULE_1__.categoryFromExtMgmtErrorKind)(error.kind),
+        reason: error.reason,
+        remedy: error.remedy,
+    };
+    try {
+        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_2__.getUserContext)(req);
+        void runtime.audit.logError(user, _constants_js__WEBPACK_IMPORTED_MODULE_0__.AUTHORITY_SDK_EXTENSION_ID, `ext-mgmt ${error.errorCode}: ${error.reason}`).catch(() => undefined);
+    }
+    catch {
+    }
+    res.status(status).json(payload);
+}
+function registerExtMgmtRoutes(router, runtime, fail) {
+    router.post('/ext-mgmt/rebuild-update', async (req, res) => {
+        try {
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_2__.getUserContext)(req);
+            assertAdminUser(user);
+            const request = (req.body ?? {});
+            const response = await runtime.extMgmt.rebuildUpdate(user, {
+                target: parseTarget(request),
+                ...(request.branch !== undefined ? { branch: request.branch } : {}),
+                ...(request.credentials !== undefined ? { credentials: request.credentials } : {}),
+            });
+            void runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_0__.AUTHORITY_SDK_EXTENSION_ID, 'Ext-mgmt rebuild update', {
+                target: `${response.target.location}/${response.target.name}`,
+                status: response.status,
+                changed: response.changed,
+                dirty: response.dirty,
+                backupId: response.backup?.backupId ?? null,
+            }).catch(() => undefined);
+            res.json(response);
+        }
+        catch (error) {
+            failExtMgmt(runtime, req, res, fail, error);
+        }
+    });
+    router.get('/ext-mgmt/backups', async (req, res) => {
+        try {
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_2__.getUserContext)(req);
+            assertAdminUser(user);
+            const target = parseTarget({
+                target: {
+                    location: req.query?.location,
+                    name: req.query?.name,
+                },
+            });
+            const response = await runtime.extMgmt.listBackups(user, target);
+            res.json(response);
+        }
+        catch (error) {
+            failExtMgmt(runtime, req, res, fail, error);
+        }
+    });
+    router.post('/ext-mgmt/backups/restore', async (req, res) => {
+        try {
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_2__.getUserContext)(req);
+            assertAdminUser(user);
+            const body = (req.body ?? {});
+            const backupId = typeof body.backupId === 'string' ? body.backupId : '';
+            const response = await runtime.extMgmt.restoreBackup(user, parseTarget(body), backupId);
+            void runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_0__.AUTHORITY_SDK_EXTENSION_ID, 'Ext-mgmt backup restored', {
+                target: `${response.target.location}/${response.target.name}`,
+                backupId,
+                revision: response.revision,
+            }).catch(() => undefined);
+            res.json(response);
+        }
+        catch (error) {
+            failExtMgmt(runtime, req, res, fail, error);
+        }
+    });
+    router.post('/ext-mgmt/backups/delete', async (req, res) => {
+        try {
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_2__.getUserContext)(req);
+            assertAdminUser(user);
+            const body = (req.body ?? {});
+            const backupId = typeof body.backupId === 'string' ? body.backupId : '';
+            const response = await runtime.extMgmt.deleteBackup(user, parseTarget(body), backupId);
+            void runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_0__.AUTHORITY_SDK_EXTENSION_ID, 'Ext-mgmt backup deleted', {
+                target: `${response.target.location}/${response.target.name}`,
+                backupId,
+            }).catch(() => undefined);
+            res.json(response);
+        }
+        catch (error) {
+            failExtMgmt(runtime, req, res, fail, error);
+        }
+    });
 }
 
 
@@ -4485,27 +4844,29 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _services_companion_module_loader_service_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./services/companion-module-loader-service.js */ "./src/services/companion-module-loader-service.ts");
 /* harmony import */ var _services_core_service_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./services/core-service.js */ "./src/services/core-service.ts");
 /* harmony import */ var _services_data_transfer_service_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./services/data-transfer-service.js */ "./src/services/data-transfer-service.ts");
-/* harmony import */ var _services_extension_service_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./services/extension-service.js */ "./src/services/extension-service.ts");
-/* harmony import */ var _services_http_service_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./services/http-service.js */ "./src/services/http-service.ts");
-/* harmony import */ var _services_host_bridge_service_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./services/host-bridge-service.js */ "./src/services/host-bridge-service.ts");
-/* harmony import */ var _services_host_event_ledger_service_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./services/host-event-ledger-service.js */ "./src/services/host-event-ledger-service.ts");
-/* harmony import */ var _services_idempotency_service_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./services/idempotency-service.js */ "./src/services/idempotency-service.ts");
-/* harmony import */ var _services_install_service_js__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./services/install-service.js */ "./src/services/install-service.ts");
-/* harmony import */ var _services_job_service_js__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./services/job-service.js */ "./src/services/job-service.ts");
-/* harmony import */ var _services_lock_service_js__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./services/lock-service.js */ "./src/services/lock-service.ts");
-/* harmony import */ var _services_module_discovery_service_js__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./services/module-discovery-service.js */ "./src/services/module-discovery-service.ts");
-/* harmony import */ var _services_module_host_service_js__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./services/module-host-service.js */ "./src/services/module-host-service.ts");
-/* harmony import */ var _services_native_migration_service_js__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./services/native-migration-service.js */ "./src/services/native-migration-service.ts");
-/* harmony import */ var _services_permission_service_js__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./services/permission-service.js */ "./src/services/permission-service.ts");
-/* harmony import */ var _services_policy_service_js__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./services/policy-service.js */ "./src/services/policy-service.ts");
-/* harmony import */ var _services_private_fs_service_js__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./services/private-fs-service.js */ "./src/services/private-fs-service.ts");
-/* harmony import */ var _services_session_service_js__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./services/session-service.js */ "./src/services/session-service.ts");
-/* harmony import */ var _services_storage_service_js__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./services/storage-service.js */ "./src/services/storage-service.ts");
-/* harmony import */ var _services_st_manager_bridge_service_js__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./services/st-manager-bridge-service.js */ "./src/services/st-manager-bridge-service.ts");
-/* harmony import */ var _services_st_manager_control_service_js__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ./services/st-manager-control-service.js */ "./src/services/st-manager-control-service.ts");
-/* harmony import */ var _services_trivium_service_js__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ./services/trivium-service.js */ "./src/services/trivium-service.ts");
-/* harmony import */ var _services_workspace_history_service_js__WEBPACK_IMPORTED_MODULE_29__ = __webpack_require__(/*! ./services/workspace-history-service.js */ "./src/services/workspace-history-service.ts");
-/* harmony import */ var _store_authority_paths_js__WEBPACK_IMPORTED_MODULE_30__ = __webpack_require__(/*! ./store/authority-paths.js */ "./src/store/authority-paths.ts");
+/* harmony import */ var _services_ext_mgmt_service_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./services/ext-mgmt-service.js */ "./src/services/ext-mgmt-service.ts");
+/* harmony import */ var _services_extension_service_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./services/extension-service.js */ "./src/services/extension-service.ts");
+/* harmony import */ var _services_http_service_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./services/http-service.js */ "./src/services/http-service.ts");
+/* harmony import */ var _services_host_bridge_service_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./services/host-bridge-service.js */ "./src/services/host-bridge-service.ts");
+/* harmony import */ var _services_host_event_ledger_service_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./services/host-event-ledger-service.js */ "./src/services/host-event-ledger-service.ts");
+/* harmony import */ var _services_idempotency_service_js__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./services/idempotency-service.js */ "./src/services/idempotency-service.ts");
+/* harmony import */ var _services_install_service_js__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./services/install-service.js */ "./src/services/install-service.ts");
+/* harmony import */ var _services_job_service_js__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./services/job-service.js */ "./src/services/job-service.ts");
+/* harmony import */ var _services_lock_service_js__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./services/lock-service.js */ "./src/services/lock-service.ts");
+/* harmony import */ var _services_module_discovery_service_js__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./services/module-discovery-service.js */ "./src/services/module-discovery-service.ts");
+/* harmony import */ var _services_module_host_service_js__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./services/module-host-service.js */ "./src/services/module-host-service.ts");
+/* harmony import */ var _services_native_migration_service_js__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./services/native-migration-service.js */ "./src/services/native-migration-service.ts");
+/* harmony import */ var _services_permission_service_js__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./services/permission-service.js */ "./src/services/permission-service.ts");
+/* harmony import */ var _services_policy_service_js__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./services/policy-service.js */ "./src/services/policy-service.ts");
+/* harmony import */ var _services_private_fs_service_js__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./services/private-fs-service.js */ "./src/services/private-fs-service.ts");
+/* harmony import */ var _services_session_service_js__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./services/session-service.js */ "./src/services/session-service.ts");
+/* harmony import */ var _services_storage_service_js__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./services/storage-service.js */ "./src/services/storage-service.ts");
+/* harmony import */ var _services_st_manager_bridge_service_js__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ./services/st-manager-bridge-service.js */ "./src/services/st-manager-bridge-service.ts");
+/* harmony import */ var _services_st_manager_control_service_js__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ./services/st-manager-control-service.js */ "./src/services/st-manager-control-service.ts");
+/* harmony import */ var _services_trivium_service_js__WEBPACK_IMPORTED_MODULE_29__ = __webpack_require__(/*! ./services/trivium-service.js */ "./src/services/trivium-service.ts");
+/* harmony import */ var _services_workspace_history_service_js__WEBPACK_IMPORTED_MODULE_30__ = __webpack_require__(/*! ./services/workspace-history-service.js */ "./src/services/workspace-history-service.ts");
+/* harmony import */ var _store_authority_paths_js__WEBPACK_IMPORTED_MODULE_31__ = __webpack_require__(/*! ./store/authority-paths.js */ "./src/store/authority-paths.ts");
+
 
 
 
@@ -4542,33 +4903,34 @@ function createAuthorityRuntime() {
     const events = new _events_sse_broker_js__WEBPACK_IMPORTED_MODULE_0__.SseBroker(core);
     const audit = new _services_audit_service_js__WEBPACK_IMPORTED_MODULE_6__.AuditService(core);
     const transfers = new _services_data_transfer_service_js__WEBPACK_IMPORTED_MODULE_9__.DataTransferService();
-    const extensions = new _services_extension_service_js__WEBPACK_IMPORTED_MODULE_10__.ExtensionService(core);
-    const install = new _services_install_service_js__WEBPACK_IMPORTED_MODULE_15__.InstallService();
-    const globalPaths = (0,_store_authority_paths_js__WEBPACK_IMPORTED_MODULE_30__.getGlobalAuthorityPaths)();
-    const hostBridge = new _services_host_bridge_service_js__WEBPACK_IMPORTED_MODULE_12__.HostBridgeService({
+    const extensions = new _services_extension_service_js__WEBPACK_IMPORTED_MODULE_11__.ExtensionService(core);
+    const install = new _services_install_service_js__WEBPACK_IMPORTED_MODULE_16__.InstallService();
+    const globalPaths = (0,_store_authority_paths_js__WEBPACK_IMPORTED_MODULE_31__.getGlobalAuthorityPaths)();
+    const hostBridge = new _services_host_bridge_service_js__WEBPACK_IMPORTED_MODULE_13__.HostBridgeService({
         pluginRoot: install.getPluginRoot(),
         stateDir: globalPaths.hostBridgeStateDir,
         resolveSillyTavernRoot: () => install.getSillyTavernRoot(),
     });
-    const policies = new _services_policy_service_js__WEBPACK_IMPORTED_MODULE_22__.PolicyService(core);
-    const permissions = new _services_permission_service_js__WEBPACK_IMPORTED_MODULE_21__.PermissionService(policies, core);
-    const sessions = new _services_session_service_js__WEBPACK_IMPORTED_MODULE_24__.SessionService(core);
-    const storage = new _services_storage_service_js__WEBPACK_IMPORTED_MODULE_25__.StorageService(core);
-    const stManagerBridge = new _services_st_manager_bridge_service_js__WEBPACK_IMPORTED_MODULE_26__.StManagerBridgeService();
-    const stManagerControl = new _services_st_manager_control_service_js__WEBPACK_IMPORTED_MODULE_27__.StManagerControlService();
-    const files = new _services_private_fs_service_js__WEBPACK_IMPORTED_MODULE_23__.PrivateFsService(core);
-    const http = new _services_http_service_js__WEBPACK_IMPORTED_MODULE_11__.HttpService(core);
-    const jobs = new _services_job_service_js__WEBPACK_IMPORTED_MODULE_16__.JobService(core);
-    const trivium = new _services_trivium_service_js__WEBPACK_IMPORTED_MODULE_28__.TriviumService(core);
-    const locks = new _services_lock_service_js__WEBPACK_IMPORTED_MODULE_17__.LockService();
-    const hostEvents = new _services_host_event_ledger_service_js__WEBPACK_IMPORTED_MODULE_13__.HostEventLedgerService(core, locks);
-    const nativeMigrations = new _services_native_migration_service_js__WEBPACK_IMPORTED_MODULE_20__.NativeMigrationService();
+    const policies = new _services_policy_service_js__WEBPACK_IMPORTED_MODULE_23__.PolicyService(core);
+    const permissions = new _services_permission_service_js__WEBPACK_IMPORTED_MODULE_22__.PermissionService(policies, core);
+    const sessions = new _services_session_service_js__WEBPACK_IMPORTED_MODULE_25__.SessionService(core);
+    const storage = new _services_storage_service_js__WEBPACK_IMPORTED_MODULE_26__.StorageService(core);
+    const stManagerBridge = new _services_st_manager_bridge_service_js__WEBPACK_IMPORTED_MODULE_27__.StManagerBridgeService();
+    const stManagerControl = new _services_st_manager_control_service_js__WEBPACK_IMPORTED_MODULE_28__.StManagerControlService();
+    const files = new _services_private_fs_service_js__WEBPACK_IMPORTED_MODULE_24__.PrivateFsService(core);
+    const http = new _services_http_service_js__WEBPACK_IMPORTED_MODULE_12__.HttpService(core);
+    const jobs = new _services_job_service_js__WEBPACK_IMPORTED_MODULE_17__.JobService(core);
+    const trivium = new _services_trivium_service_js__WEBPACK_IMPORTED_MODULE_29__.TriviumService(core);
+    const locks = new _services_lock_service_js__WEBPACK_IMPORTED_MODULE_18__.LockService();
+    const hostEvents = new _services_host_event_ledger_service_js__WEBPACK_IMPORTED_MODULE_14__.HostEventLedgerService(core, locks);
+    const nativeMigrations = new _services_native_migration_service_js__WEBPACK_IMPORTED_MODULE_21__.NativeMigrationService();
+    const extMgmt = new _services_ext_mgmt_service_js__WEBPACK_IMPORTED_MODULE_10__.ExtMgmtService({ resolveSillyTavernRoot: () => install.getSillyTavernRoot() });
     const adminPackages = new _services_admin_package_service_js__WEBPACK_IMPORTED_MODULE_1__.AdminPackageService(core, extensions, permissions, policies, storage, files, trivium);
-    const modules = new _services_module_host_service_js__WEBPACK_IMPORTED_MODULE_19__.ModuleHostService(permissions, audit, trivium, storage, files, jobs, events, hostEvents);
-    const moduleDiscovery = new _services_module_discovery_service_js__WEBPACK_IMPORTED_MODULE_18__.ModuleDiscoveryService(install);
-    const idempotency = new _services_idempotency_service_js__WEBPACK_IMPORTED_MODULE_14__.IdempotencyService(storage);
+    const modules = new _services_module_host_service_js__WEBPACK_IMPORTED_MODULE_20__.ModuleHostService(permissions, audit, trivium, storage, files, jobs, events, hostEvents);
+    const moduleDiscovery = new _services_module_discovery_service_js__WEBPACK_IMPORTED_MODULE_19__.ModuleDiscoveryService(install);
+    const idempotency = new _services_idempotency_service_js__WEBPACK_IMPORTED_MODULE_15__.IdempotencyService(storage);
     const companionLoader = new _services_companion_module_loader_service_js__WEBPACK_IMPORTED_MODULE_7__.CompanionModuleLoaderService(modules, permissions, audit, trivium, core, locks, idempotency);
-    const workspaceHistory = new _services_workspace_history_service_js__WEBPACK_IMPORTED_MODULE_29__.WorkspaceHistoryService(globalPaths.agentWorkspacesDir);
+    const workspaceHistory = new _services_workspace_history_service_js__WEBPACK_IMPORTED_MODULE_30__.WorkspaceHistoryService(globalPaths.agentWorkspacesDir);
     const agentProfiles = new _services_agent_profile_store_service_js__WEBPACK_IMPORTED_MODULE_3__.AgentProfileStoreService(globalPaths.agentStateDir);
     const agentHostTools = new _services_agent_host_tools_js__WEBPACK_IMPORTED_MODULE_2__.AgentHostToolService(workspaceHistory);
     const agentSessions = new _services_agent_session_runtime_service_js__WEBPACK_IMPORTED_MODULE_4__.AgentSessionRuntimeService(new _services_agent_session_store_service_js__WEBPACK_IMPORTED_MODULE_5__.AgentSessionStoreService(globalPaths.agentStateDir), agentProfiles, workspaceHistory, agentHostTools, { moduleHost: modules });
@@ -4593,6 +4955,7 @@ function createAuthorityRuntime() {
         jobs,
         trivium,
         nativeMigrations,
+        extMgmt,
         modules,
         moduleDiscovery,
         locks,
@@ -14569,6 +14932,569 @@ async function ensureDefaultAgentWorkspace(services) {
         displayName: 'SillyTavern',
         rootPath: sillyTavernRoot,
     });
+}
+
+
+/***/ },
+
+/***/ "./src/services/ext-mgmt-service.ts"
+/*!******************************************!*\
+  !*** ./src/services/ext-mgmt-service.ts ***!
+  \******************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ExtMgmtService: () => (/* binding */ ExtMgmtService),
+/* harmony export */   ExtMgmtServiceError: () => (/* binding */ ExtMgmtServiceError),
+/* harmony export */   buildAuthenticatedUrl: () => (/* binding */ buildAuthenticatedUrl),
+/* harmony export */   categoryFromExtMgmtErrorKind: () => (/* binding */ categoryFromExtMgmtErrorKind),
+/* harmony export */   isExtMgmtServiceError: () => (/* binding */ isExtMgmtServiceError),
+/* harmony export */   scrubSecrets: () => (/* binding */ scrubSecrets),
+/* harmony export */   statusFromExtMgmtErrorKind: () => (/* binding */ statusFromExtMgmtErrorKind)
+/* harmony export */ });
+/* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:child_process */ "node:child_process");
+/* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_child_process__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:crypto */ "node:crypto");
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_crypto__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! node:fs */ "node:fs");
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(node_fs__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var node_os__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! node:os */ "node:os");
+/* harmony import */ var node_os__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(node_os__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils.js */ "./src/utils.ts");
+
+
+
+
+
+
+/**
+ * 扩展管理服务（ext-mgmt）—— rebuildUpdate 能力 + 备份管理。
+ *
+ * 职责：对「装进酒馆的扩展 / 服务端插件目录」（独立 Git 仓库）执行安全更新：
+ * depth-1 fetch → 候选树校验 → 工作区快照自动提交到备份 ref → 原子重建 tracked 文件。
+ *
+ * Git 语义模板来自 {@link InstallService.pullLatestFromGit}（preflight
+ * `git status --short --branch` + 有界超时 + windowsHide），但按本能力需要**泛化目录签名**
+ * （操作任意扩展目录而非 pluginRoot），并额外承担凭据擦洗义务（D8-3：凭据只在请求内存在，
+ * 不落盘、不出现在任何返回输出里），因此独立实现而非改公开面复用。
+ *
+ * 纪律对齐：
+ * - 磁盘扫描纪律（extension-registry-service）：不执行扩展代码、跳过 `.git`；
+ * - 链接禁穿（P-19 / L0-1）：目标目录是 symlink / junction 时直接拒绝；
+ * - 有界等待（L1-MR-7）：所有 git 子进程带超时，fetch 用 GIT_TERMINAL_PROMPT=0 防挂起；
+ * - 不动数据文件布局（L1-MF-9）：只通过 git 高层命令操作，绝不手写 `.git` 内部路径。
+ */
+/** 备份 / fetch 专用 ref 命名空间（全部在 refs/ext-mgmt/ 下，不碰 refs/heads 与 tags）。 */
+const REF_NAMESPACE = 'refs/ext-mgmt';
+const BACKUP_REF_PREFIX = `${REF_NAMESPACE}/backup`;
+const FETCH_REF_PREFIX = `${REF_NAMESPACE}/fetch`;
+/** 默认 git 超时：与 install-service 的 runGit 一致；fetch 稍长。 */
+const GIT_TIMEOUT_MS = 30_000;
+const GIT_FETCH_TIMEOUT_MS = 120_000;
+/** 扩展目录候选树必须包含的根标记文件（防 reset 到无关仓库）。 */
+const EXTENSION_MARKER_FILES = ['manifest.json'];
+/** 服务端插件候选树必须包含的根标记文件（任一即可）。 */
+const PLUGIN_MARKER_FILES = ['manifest.json', 'package.json', 'index.js'];
+const COMMITTER_ARGS = ['-c', 'user.name=authority-ext-mgmt', '-c', 'user.email=authority@localhost'];
+class ExtMgmtServiceError extends Error {
+    kind;
+    errorCode;
+    reason;
+    remedy;
+    constructor(message, kind, 
+    /** 机器码（三段式 error / code 字段）。 */
+    errorCode, 
+    /** 人话原因（三段式 reason）。 */
+    reason, 
+    /** 出路建议（三段式 remedy）。 */
+    remedy) {
+        super(message);
+        this.kind = kind;
+        this.errorCode = errorCode;
+        this.reason = reason;
+        this.remedy = remedy;
+        this.name = 'ExtMgmtServiceError';
+    }
+}
+function isExtMgmtServiceError(error) {
+    return error instanceof ExtMgmtServiceError;
+}
+function statusFromExtMgmtErrorKind(kind) {
+    switch (kind) {
+        case 'validation':
+            return 400;
+        case 'not_found':
+            return 404;
+        case 'conflict':
+            return 409;
+        case 'git_remote_failed':
+            return 502;
+        default:
+            return 500;
+    }
+}
+function categoryFromExtMgmtErrorKind(kind) {
+    switch (kind) {
+        case 'validation':
+            return 'validation';
+        case 'not_found':
+            return 'validation';
+        case 'conflict':
+            return 'validation';
+        case 'git_remote_failed':
+            return 'core';
+        default:
+            return 'core';
+    }
+}
+class ExtMgmtService {
+    resolveSillyTavernRoot;
+    env;
+    logger;
+    constructor(options) {
+        this.resolveSillyTavernRoot = options.resolveSillyTavernRoot;
+        this.env = options.env ?? process.env;
+        this.logger = options.logger ?? console;
+    }
+    /**
+     * rebuildUpdate：depth-1 fetch → 候选树校验 → 工作区快照提交到备份 ref →
+     * 原子重建 tracked 文件到候选提交。任何失败路径都保证「先校验后动手」：
+     * 候选树校验与未跟踪冲突预检全部通过之前，不发生任何本地变更。
+     */
+    async rebuildUpdate(user, request) {
+        const context = this.resolveTarget(user, request.target);
+        const dir = context.dir;
+        const targetName = this.targetRefSegment(context.target);
+        // ---- preflight（模板：install-service pullLatestFromGit）----
+        this.assertGitRepo(dir);
+        const branch = this.resolveBranch(dir, request.branch);
+        const previousRevision = this.runGit(dir, ['rev-parse', 'HEAD']).stdout;
+        const preflightStatus = this.runGit(dir, ['status', '--short', '--branch'], { allowNoisyOutput: true }).stdout;
+        const originUrl = this.getOriginUrl(dir);
+        const dirty = this.getWorktreeDirty(dir);
+        // ---- depth-1 fetch（候选提交落到 refs/ext-mgmt/fetch/<name>，不写远端配置）----
+        const fetchArgs = ['fetch', '--depth', '1'];
+        let secrets = [];
+        if (request.credentials?.token) {
+            const authenticatedUrl = buildAuthenticatedUrl(originUrl, request.credentials);
+            if (!authenticatedUrl) {
+                throw new ExtMgmtServiceError('ext_mgmt_credentials_unsupported', 'validation', 'ext_mgmt_credentials_unsupported', `origin 远端是 ${describeTransport(originUrl)}，无法按请求注入用户名/令牌凭据。`, '凭据注入仅支持 http/https 远端；ssh 远端请改用宿主已配置的密钥认证后重试（credentials 留空）。');
+            }
+            secrets = [request.credentials.token];
+            fetchArgs.push(authenticatedUrl);
+        }
+        else {
+            fetchArgs.push('origin');
+        }
+        const fetchRef = `${FETCH_REF_PREFIX}/${targetName}`;
+        fetchArgs.push('--force', `+refs/heads/${branch}:${fetchRef}`);
+        this.runGit(dir, fetchArgs, {
+            allowNoisyOutput: true,
+            timeoutMs: GIT_FETCH_TIMEOUT_MS,
+            secrets,
+            extraEnv: { GIT_TERMINAL_PROMPT: '0' },
+            failureKind: 'git_remote_failed',
+            failureCode: 'ext_mgmt_git_remote_failed',
+            failureReason: `从 origin 拉取分支 ${branch} 的 depth-1 快照失败。`,
+            failureRemedy: '检查网络与 origin 远端可达性；私有仓请随请求注入凭据（token 只在本次请求内存中使用，不会被保存）。',
+        });
+        const fetchedRevision = this.runGit(dir, ['rev-parse', fetchRef], { secrets }).stdout;
+        // ---- 候选树校验：候选提交必须是同一种扩展/插件，而不是无关仓库 ----
+        this.assertCandidateTree(dir, context.target, fetchedRevision, secrets);
+        // ---- 已最新 + 干净：无操作路径 ----
+        if (fetchedRevision === previousRevision && !dirty) {
+            return {
+                target: context.target,
+                status: 'already_up_to_date',
+                branch,
+                previousRevision,
+                currentRevision: previousRevision,
+                changed: false,
+                dirty: false,
+                backup: null,
+                untrackedPreservedCount: this.listUntracked(dir).length,
+                preflightStatus,
+                updatedAt: new Date().toISOString(),
+            };
+        }
+        // ---- 未跟踪冲突预检：候选树要写入的文件若被未跟踪文件占位，先失败（零变更）----
+        const untrackedConflicts = intersect(this.listUntracked(dir), this.listTreeFiles(dir, fetchedRevision, secrets));
+        if (untrackedConflicts.length > 0) {
+            const preview = untrackedConflicts.slice(0, 5).join(', ');
+            throw new ExtMgmtServiceError('ext_mgmt_untracked_conflict', 'conflict', 'ext_mgmt_untracked_conflict', `候选版本要写入的文件与现有未跟踪文件冲突（共 ${untrackedConflicts.length} 个，如：${preview}）。`, '把这些未跟踪文件移走或删除后重试；它们不受 git 跟踪，本服务不会替你删除。');
+        }
+        // ---- 工作区快照 → 备份 ref（含未提交改动与未跟踪文件；不动真实 index / HEAD）----
+        const backup = this.createBackupRef(dir, context.target, previousRevision, dirty);
+        // ---- 原子重建 tracked 文件：分支指到候选提交，index 与工作树随之重建 ----
+        this.runGit(dir, ['reset', '--hard', fetchedRevision], { secrets });
+        const currentRevision = this.runGit(dir, ['rev-parse', 'HEAD'], { secrets }).stdout;
+        if (currentRevision !== fetchedRevision) {
+            throw new ExtMgmtServiceError('ext_mgmt_rebuild_mismatch', 'internal', 'ext_mgmt_rebuild_mismatch', '重建后 HEAD 与候选提交不一致，工作区状态未知。', `可用备份 ref ${backup.ref} 恢复更新前的工作区快照。`);
+        }
+        this.logger.info(`[authority] ext-mgmt rebuilt ${context.target.location}/${context.target.name}: ${shortSha(previousRevision)} -> ${shortSha(currentRevision)} (backup ${backup.backupId})`);
+        return {
+            target: context.target,
+            status: 'updated',
+            branch,
+            previousRevision,
+            currentRevision,
+            changed: previousRevision !== currentRevision,
+            dirty,
+            backup,
+            untrackedPreservedCount: this.listUntracked(dir).length,
+            preflightStatus,
+            updatedAt: new Date().toISOString(),
+        };
+    }
+    async listBackups(user, target) {
+        const context = this.resolveTarget(user, target);
+        const dir = context.dir;
+        this.assertGitRepo(dir);
+        const prefix = `${BACKUP_REF_PREFIX}/${this.targetRefSegment(context.target)}/`;
+        const result = this.runGit(dir, [
+            'for-each-ref',
+            prefix,
+            '--format=%(refname)%09%(objectname)%09%(creatordate:iso-strict)%09%(subject)%09%(parent)',
+        ]);
+        const backups = [];
+        for (const line of result.stdout.split('\n')) {
+            if (!line.trim()) {
+                continue;
+            }
+            const [refname, objectname, createdAt, subject, parent] = line.split('\t');
+            if (!refname || !objectname) {
+                continue;
+            }
+            backups.push({
+                backupId: refname.slice(prefix.length),
+                ref: refname,
+                revision: objectname,
+                parentRevision: parent || null,
+                createdAt: createdAt || '',
+                message: subject || '',
+                dirty: (subject ?? '').includes('(dirty)'),
+            });
+        }
+        backups.sort((left, right) => right.backupId.localeCompare(left.backupId));
+        return {
+            target: context.target,
+            backups,
+            count: backups.length,
+            generatedAt: new Date().toISOString(),
+        };
+    }
+    async restoreBackup(user, requestTarget, backupId) {
+        const context = this.resolveTarget(user, requestTarget);
+        const dir = context.dir;
+        this.assertGitRepo(dir);
+        const ref = this.resolveBackupRef(context.target, backupId, dir);
+        // 恢复前先把当前状态（含未提交改动）快照成新的备份 ref，保证恢复本身可回退。
+        const dirty = this.getWorktreeDirty(dir);
+        const headRevision = this.runGit(dir, ['rev-parse', 'HEAD']).stdout;
+        const preRestore = this.createBackupRef(dir, context.target, headRevision, dirty, 'pre-restore snapshot');
+        // 备份树里可能出现「现在是未跟踪文件、快照里是跟踪文件」的占位冲突，先预检。
+        const conflicts = intersect(this.listUntracked(dir), this.listTreeFiles(dir, ref.revision));
+        if (conflicts.length > 0) {
+            const preview = conflicts.slice(0, 5).join(', ');
+            throw new ExtMgmtServiceError('ext_mgmt_untracked_conflict', 'conflict', 'ext_mgmt_untracked_conflict', `备份快照中的文件与当前未跟踪文件冲突（共 ${conflicts.length} 个，如：${preview}）。`, '先移走或删除这些未跟踪文件再恢复。');
+        }
+        this.runGit(dir, ['reset', '--hard', ref.revision]);
+        this.logger.info(`[authority] ext-mgmt restored ${context.target.location}/${context.target.name} from backup ${backupId} (pre-restore ${preRestore.backupId})`);
+        return {
+            target: context.target,
+            backupId,
+            revision: ref.revision,
+            preRestoreBackupId: preRestore.backupId,
+            restoredAt: new Date().toISOString(),
+        };
+    }
+    async deleteBackup(user, requestTarget, backupId) {
+        const context = this.resolveTarget(user, requestTarget);
+        const dir = context.dir;
+        this.assertGitRepo(dir);
+        const ref = this.resolveBackupRef(context.target, backupId, dir);
+        this.runGit(dir, ['update-ref', '-d', ref.ref]);
+        this.logger.info(`[authority] ext-mgmt deleted backup ${ref.ref}`);
+        return {
+            target: context.target,
+            backupId,
+            deleted: true,
+        };
+    }
+    // ------------------------------------------------------------------
+    // 目标解析与定位
+    // ------------------------------------------------------------------
+    resolveTarget(user, target) {
+        const name = typeof target?.name === 'string' ? target.name : '';
+        if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name) || name.includes('..')) {
+            throw new ExtMgmtServiceError('ext_mgmt_invalid_target', 'validation', 'ext_mgmt_invalid_target', `扩展目录名不合法：${JSON.stringify(name ?? null)}。`, 'name 只允许一段目录名（字母、数字、点、下划线、连字符），不允许路径分隔符。');
+        }
+        const location = target.location;
+        let baseDir = null;
+        if (location === 'third-party') {
+            const sillyTavernRoot = this.resolveSillyTavernRoot();
+            if (!sillyTavernRoot) {
+                throw new ExtMgmtServiceError('ext_mgmt_host_root_unavailable', 'not_found', 'ext_mgmt_host_root_unavailable', '无法定位宿主（SillyTavern）根目录，third-party 扩展不可用。', '确认 Authority 服务端插件安装在宿主的 plugins 目录下后重试。');
+            }
+            baseDir = node_path__WEBPACK_IMPORTED_MODULE_4___default().join(sillyTavernRoot, 'public', 'scripts', 'extensions', 'third-party');
+        }
+        else if (location === 'plugins') {
+            const sillyTavernRoot = this.resolveSillyTavernRoot();
+            if (!sillyTavernRoot) {
+                throw new ExtMgmtServiceError('ext_mgmt_host_root_unavailable', 'not_found', 'ext_mgmt_host_root_unavailable', '无法定位宿主（SillyTavern）根目录，plugins 插件不可用。', '确认 Authority 服务端插件安装在宿主的 plugins 目录下后重试。');
+            }
+            baseDir = node_path__WEBPACK_IMPORTED_MODULE_4___default().join(sillyTavernRoot, 'plugins');
+        }
+        else if (location === 'user-extensions') {
+            const userRoot = user.rootDir || null;
+            if (!userRoot) {
+                throw new ExtMgmtServiceError('ext_mgmt_user_root_unavailable', 'not_found', 'ext_mgmt_user_root_unavailable', '请求缺少用户数据根目录，用户私有扩展不可用。', '确认宿主在请求上下文中注入了用户目录信息。');
+            }
+            baseDir = node_path__WEBPACK_IMPORTED_MODULE_4___default().join(userRoot, 'extensions');
+        }
+        else {
+            throw new ExtMgmtServiceError('ext_mgmt_invalid_target', 'validation', 'ext_mgmt_invalid_target', `未知的扩展位置类型：${String(location)}。`, 'location 必须是 third-party / plugins / user-extensions 之一。');
+        }
+        // resolveContainedPath（utils.ts 惯例）防目录穿越；再 lstat 拒绝 symlink/junction（P-19）。
+        const dir = node_path__WEBPACK_IMPORTED_MODULE_4___default().resolve(baseDir, name);
+        if (dir !== node_path__WEBPACK_IMPORTED_MODULE_4___default().resolve(baseDir) && !dir.startsWith(node_path__WEBPACK_IMPORTED_MODULE_4___default().resolve(baseDir) + (node_path__WEBPACK_IMPORTED_MODULE_4___default().sep))) {
+            throw new ExtMgmtServiceError('ext_mgmt_invalid_target', 'validation', 'ext_mgmt_invalid_target', '扩展目录解析后逃逸出基础目录。', 'name 不允许包含路径分隔符或上级目录引用。');
+        }
+        let stats;
+        try {
+            stats = node_fs__WEBPACK_IMPORTED_MODULE_2___default().lstatSync(dir);
+        }
+        catch {
+            throw new ExtMgmtServiceError('ext_mgmt_target_not_found', 'not_found', 'ext_mgmt_target_not_found', `扩展目录不存在：${location}/${name}。`, '检查 location 与 name 是否正确；目录列表可用扩展注册表（/registry/extensions）查询。');
+        }
+        if (stats.isSymbolicLink()) {
+            throw new ExtMgmtServiceError('ext_mgmt_symlink_not_allowed', 'validation', 'ext_mgmt_symlink_not_allowed', `扩展目录 ${location}/${name} 是符号链接/junction，拒绝执行写操作。`, '写穿链接会污染链接目标（可能是工作区源码仓）；请先在宿主侧改为真实目录或解除链接。');
+        }
+        if (!stats.isDirectory()) {
+            throw new ExtMgmtServiceError('ext_mgmt_invalid_target', 'validation', 'ext_mgmt_invalid_target', `扩展目标 ${location}/${name} 不是目录。`, 'location/name 应指向一个扩展或插件目录。');
+        }
+        return { target: { location, name }, dir };
+    }
+    targetRefSegment(target) {
+        return (0,_utils_js__WEBPACK_IMPORTED_MODULE_5__.sanitizeFileSegment)(target.name);
+    }
+    assertGitRepo(dir) {
+        if (!node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_4___default().join(dir, '.git'))) {
+            throw new ExtMgmtServiceError('ext_mgmt_not_git_repo', 'validation', 'ext_mgmt_not_git_repo', '目标目录不是 Git 仓库，无法执行 git 更新。', '该扩展不是通过 git 安装的；请改用宿主原生安装通道更新。');
+        }
+        try {
+            this.runGit(dir, ['rev-parse', '--verify', 'HEAD']);
+        }
+        catch {
+            throw new ExtMgmtServiceError('ext_mgmt_no_commit', 'validation', 'ext_mgmt_no_commit', '目标仓库没有任何提交（HEAD 不存在）。', '先在宿主侧完成安装提交，或改用宿主原生安装通道。');
+        }
+    }
+    resolveBranch(dir, requestedBranch) {
+        if (requestedBranch !== undefined && requestedBranch !== null) {
+            const branch = String(requestedBranch).trim();
+            if (!/^[A-Za-z0-9._\-/]+$/.test(branch) || branch.startsWith('-') || branch.includes('..')) {
+                throw new ExtMgmtServiceError('ext_mgmt_invalid_branch', 'validation', 'ext_mgmt_invalid_branch', `分支名不合法：${JSON.stringify(requestedBranch)}。`, '分支名必须是合法的 git ref（字母、数字、点、下划线、连字符、斜杠）。');
+            }
+            return branch;
+        }
+        const current = this.runGit(dir, ['rev-parse', '--abbrev-ref', 'HEAD']).stdout;
+        if (current === 'HEAD') {
+            throw new ExtMgmtServiceError('ext_mgmt_detached_head', 'validation', 'ext_mgmt_detached_head', '目标仓库处于 detached HEAD 状态，且未指定要更新到的分支。', '在请求中显式传入 branch（上游分支名）后重试。');
+        }
+        return current;
+    }
+    getOriginUrl(dir) {
+        try {
+            return this.runGit(dir, ['remote', 'get-url', 'origin']).stdout;
+        }
+        catch {
+            throw new ExtMgmtServiceError('ext_mgmt_no_origin', 'validation', 'ext_mgmt_no_origin', '目标仓库没有配置 origin 远端，无法拉取更新。', '先在宿主侧为该扩展配置 origin 远端。');
+        }
+    }
+    getWorktreeDirty(dir) {
+        return this.runGit(dir, ['status', '--porcelain']).stdout.length > 0;
+    }
+    listUntracked(dir) {
+        const result = this.runGit(dir, ['ls-files', '--others', '--exclude-standard']);
+        return result.stdout.split('\n').filter(Boolean);
+    }
+    listTreeFiles(dir, revision, secrets = []) {
+        const result = this.runGit(dir, ['ls-tree', '-r', '--name-only', revision], { secrets });
+        return result.stdout.split('\n').filter(Boolean);
+    }
+    assertCandidateTree(dir, target, revision, secrets) {
+        const markers = target.location === 'plugins' ? PLUGIN_MARKER_FILES : EXTENSION_MARKER_FILES;
+        const currentMarkers = markers.filter(marker => node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(node_path__WEBPACK_IMPORTED_MODULE_4___default().join(dir, marker)));
+        const candidateMarkers = markers.filter(marker => {
+            try {
+                this.runGit(dir, ['cat-file', '-e', `${revision}:${marker}`], { secrets });
+                return true;
+            }
+            catch {
+                return false;
+            }
+        });
+        if (currentMarkers.length === 0 && candidateMarkers.length === 0) {
+            throw new ExtMgmtServiceError('ext_mgmt_candidate_tree_invalid', 'validation', 'ext_mgmt_candidate_tree_invalid', '候选提交与当前目录都不是可识别的扩展/插件（缺少根标记文件）。', `候选树根目录至少应包含 ${markers.join(' / ')} 之一；确认 branch 指向正确的上游仓库分支。`);
+        }
+        if (candidateMarkers.length === 0) {
+            throw new ExtMgmtServiceError('ext_mgmt_candidate_tree_invalid', 'validation', 'ext_mgmt_candidate_tree_invalid', `候选提交缺少扩展根标记文件（当前目录含 ${currentMarkers.join(', ')}，候选树一个都没有）。`, `候选分支可能不是该扩展的上游仓库；确认 branch 后重试。`);
+        }
+    }
+    // ------------------------------------------------------------------
+    // 备份 ref
+    // ------------------------------------------------------------------
+    createBackupRef(dir, target, headRevision, dirty, label = 'backup') {
+        const tempIndex = node_path__WEBPACK_IMPORTED_MODULE_4___default().join(node_os__WEBPACK_IMPORTED_MODULE_3___default().tmpdir(), `authority-ext-mgmt-index-${node_crypto__WEBPACK_IMPORTED_MODULE_1___default().randomUUID()}`);
+        try {
+            // 用临时 index 快照工作区：read-tree HEAD 起底（记录删除），add -A 对齐工作区；
+            // 全程 GIT_INDEX_FILE 指向临时文件，绝不触碰真实 index / HEAD。
+            this.runGit(dir, ['read-tree', 'HEAD'], { extraEnv: { GIT_INDEX_FILE: tempIndex } });
+            this.runGit(dir, ['add', '-A', '--'], { extraEnv: { GIT_INDEX_FILE: tempIndex } });
+            const tree = this.runGit(dir, ['write-tree'], { extraEnv: { GIT_INDEX_FILE: tempIndex } }).stdout;
+            const createdAt = new Date();
+            const backupId = `${formatRefTimestamp(createdAt)}-${node_crypto__WEBPACK_IMPORTED_MODULE_1___default().randomBytes(4).toString('hex')}`;
+            const message = `ext-mgmt ${label} ${target.location}/${target.name}${dirty ? ' (dirty)' : ''}`;
+            const commit = this.runGit(dir, [
+                ...COMMITTER_ARGS,
+                'commit-tree',
+                tree,
+                '-p',
+                headRevision,
+                '-m',
+                message,
+            ]).stdout;
+            const ref = `${BACKUP_REF_PREFIX}/${this.targetRefSegment(target)}/${backupId}`;
+            this.runGit(dir, ['update-ref', ref, commit]);
+            return {
+                backupId,
+                ref,
+                revision: commit,
+                parentRevision: headRevision,
+                createdAt: createdAt.toISOString(),
+                message,
+                dirty,
+            };
+        }
+        finally {
+            node_fs__WEBPACK_IMPORTED_MODULE_2___default().rmSync(tempIndex, { force: true });
+        }
+    }
+    resolveBackupRef(target, backupId, dir) {
+        if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(backupId)) {
+            throw new ExtMgmtServiceError('ext_mgmt_invalid_backup_id', 'validation', 'ext_mgmt_invalid_backup_id', `备份 id 不合法：${JSON.stringify(backupId)}。`, '备份 id 是列表接口返回的 backupId 原样字符串。');
+        }
+        const prefix = `${BACKUP_REF_PREFIX}/${this.targetRefSegment(target)}/`;
+        const ref = `${prefix}${backupId}`;
+        try {
+            const revision = this.runGit(dir, ['rev-parse', '--verify', ref]).stdout;
+            const message = this.runGit(dir, ['log', '-1', '--format=%s', ref]).stdout;
+            return {
+                backupId,
+                ref,
+                revision,
+                parentRevision: null,
+                createdAt: '',
+                message,
+                dirty: message.includes('(dirty)'),
+            };
+        }
+        catch {
+            throw new ExtMgmtServiceError('ext_mgmt_backup_not_found', 'not_found', 'ext_mgmt_backup_not_found', `备份不存在：${backupId}。`, '先用 GET /ext-mgmt/backups 列出可用备份。');
+        }
+    }
+    // ------------------------------------------------------------------
+    // git 进程（模板：install-service runGit；差异：凭据擦洗 + 自定义超时 + extraEnv）
+    // ------------------------------------------------------------------
+    runGit(cwd, args, options = {}) {
+        const result = node_child_process__WEBPACK_IMPORTED_MODULE_0___default().spawnSync('git', args, {
+            cwd,
+            env: { ...this.env, ...(options.extraEnv ?? {}) },
+            encoding: 'utf8',
+            timeout: options.timeoutMs ?? GIT_TIMEOUT_MS,
+            windowsHide: true,
+        });
+        const secrets = options.secrets ?? [];
+        const scrub = (value) => scrubSecrets(value, secrets);
+        const stdout = scrub((result.stdout ?? '').trim());
+        const stderr = scrub((result.stderr ?? '').trim());
+        if (result.error) {
+            if (options.failureCode) {
+                throw new ExtMgmtServiceError(options.failureCode, options.failureKind ?? 'git_remote_failed', options.failureCode, scrub(asErrorMessage(result.error)), options.failureRemedy ?? '');
+            }
+            throw new Error(scrub(asErrorMessage(result.error)));
+        }
+        if (typeof result.status === 'number' && result.status !== 0) {
+            const message = [stderr, stdout].filter(Boolean).join('\n') || `git ${args.join(' ')} failed with exit code ${result.status}`;
+            if (options.failureCode) {
+                throw new ExtMgmtServiceError(options.failureCode, options.failureKind ?? 'git_remote_failed', options.failureCode, options.failureReason ?? message, options.failureRemedy ?? '');
+            }
+            throw new Error(message);
+        }
+        if (!options.allowNoisyOutput && stderr) {
+            return { stdout, stderr: '' };
+        }
+        return { stdout, stderr };
+    }
+}
+/**
+ * 把凭据注入远端 URL（仅内存）。仅支持 http/https；其余传输（ssh / 本地路径）
+ * 返回 null 由调用方转成三段式错误。若 URL 已带 userinfo，先剥离再注入。
+ */
+function buildAuthenticatedUrl(originUrl, credentials) {
+    let parsed;
+    try {
+        parsed = new URL(originUrl);
+    }
+    catch {
+        return null;
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return null;
+    }
+    parsed.username = encodeURIComponent(credentials.username?.trim() || 'oauth2');
+    parsed.password = encodeURIComponent(credentials.token);
+    return parsed.toString();
+}
+/** 把已知的秘密串从输出里替换为 [redacted]（错误信息也可能回显带凭据的 URL）。 */
+function scrubSecrets(text, secrets) {
+    let output = text;
+    for (const secret of secrets) {
+        if (secret) {
+            output = output.split(secret).join('[redacted]');
+        }
+    }
+    return output;
+}
+function describeTransport(originUrl) {
+    if (/^https?:\/\//i.test(originUrl)) {
+        return 'http(s)';
+    }
+    if (originUrl.startsWith('git@') || originUrl.startsWith('ssh://')) {
+        return 'ssh';
+    }
+    return '本地路径';
+}
+function intersect(left, right) {
+    const rightSet = new Set(right);
+    return left.filter(entry => rightSet.has(entry));
+}
+function shortSha(revision) {
+    return revision.slice(0, 10);
+}
+/** 备份 ref 时间戳段：UTC 紧凑形如 20261031T101500（ref 名与文件名安全）。 */
+function formatRefTimestamp(date) {
+    const pad = (value, width = 2) => String(value).padStart(width, '0');
+    return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}`;
+}
+function asErrorMessage(error) {
+    if (error instanceof Error) {
+        return error.message;
+    }
+    return String(error);
 }
 
 
@@ -26356,6 +27282,16 @@ module.exports = require("node:crypto");
 (module) {
 
 module.exports = require("node:fs");
+
+/***/ },
+
+/***/ "node:fs/promises"
+/*!***********************************!*\
+  !*** external "node:fs/promises" ***!
+  \***********************************/
+(module) {
+
+module.exports = require("node:fs/promises");
 
 /***/ },
 

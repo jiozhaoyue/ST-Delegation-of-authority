@@ -52,6 +52,8 @@ export function getFeatureAvailability(features, feature) {
             return features.diagnostics.benchmarkCore;
         case 'modules.enabled':
             return Boolean(features.modules?.enabled);
+        case 'extMgmt.rebuildUpdate':
+            return Boolean(features.extMgmt?.rebuildUpdate);
     }
 }
 //# sourceMappingURL=feature-flags.js.map

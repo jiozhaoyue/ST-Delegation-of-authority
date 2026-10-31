@@ -141,6 +141,8 @@ export class AuthorityClient {
     modules;
     registry;
     host;
+    /** 扩展管理（仅管理员端点；能力探测走 probe.features.extMgmt）。 */
+    extMgmt;
     agent;
     session = null;
     sessionPromise = null;
@@ -1395,6 +1397,36 @@ export class AuthorityClient {
                     method: 'POST',
                     body: {},
                 });
+            },
+        };
+        this.extMgmt = {
+            rebuildUpdate: async (request) => {
+                await this.requireFeature('extMgmt.rebuildUpdate', 'Authority 当前版本尚未提供扩展管理（rebuildUpdate）能力');
+                return await this.requestWithSession('/ext-mgmt/rebuild-update', {
+                    method: 'POST',
+                    body: request,
+                });
+            },
+            backups: {
+                list: async (target) => {
+                    const query = new URLSearchParams({
+                        location: target.location,
+                        name: target.name,
+                    });
+                    return await this.requestWithSession(`/ext-mgmt/backups?${query.toString()}`);
+                },
+                restore: async (request) => {
+                    return await this.requestWithSession('/ext-mgmt/backups/restore', {
+                        method: 'POST',
+                        body: request,
+                    });
+                },
+                delete: async (request) => {
+                    return await this.requestWithSession('/ext-mgmt/backups/delete', {
+                        method: 'POST',
+                        body: request,
+                    });
+                },
             },
         };
         this.agent = {
