@@ -26,7 +26,8 @@ export type AuthorityFeaturePath =
     | 'diagnostics.activityPages'
     | 'diagnostics.jobsPage'
     | 'diagnostics.benchmarkCore'
-    | 'modules.enabled';
+    | 'modules.enabled'
+    | 'extMgmt.rebuildUpdate';
 
 export function getFeatureAvailability(features: AuthorityFeatureFlags, feature: AuthorityFeaturePath): boolean {
     switch (feature) {
@@ -82,5 +83,7 @@ export function getFeatureAvailability(features: AuthorityFeatureFlags, feature:
             return features.diagnostics.benchmarkCore;
         case 'modules.enabled':
             return Boolean(features.modules?.enabled);
+        case 'extMgmt.rebuildUpdate':
+            return Boolean(features.extMgmt?.rebuildUpdate);
     }
 }

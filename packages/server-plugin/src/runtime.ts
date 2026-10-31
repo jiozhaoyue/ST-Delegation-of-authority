@@ -8,6 +8,7 @@ import { AuditService } from './services/audit-service.js';
 import { CompanionModuleLoaderService } from './services/companion-module-loader-service.js';
 import { CoreService } from './services/core-service.js';
 import { DataTransferService } from './services/data-transfer-service.js';
+import { ExtMgmtService } from './services/ext-mgmt-service.js';
 import { ExtensionService } from './services/extension-service.js';
 import { ExtensionRegistryService } from './services/extension-registry-service.js';
 import { HttpService } from './services/http-service.js';
@@ -52,6 +53,12 @@ export interface AuthorityRuntime {
     jobs: JobService;
     trivium: TriviumService;
     nativeMigrations: NativeMigrationService;
+    /**
+     * Extension management (ext-mgmt) service: rebuildUpdate + backup refs
+     * under `refs/ext-mgmt/…` for installed extensions / server plugins.
+     * Admin-gated at the route layer; see routes/ext-mgmt-routes.ts.
+     */
+    extMgmt: ExtMgmtService;
     modules: ModuleHostService;
     moduleDiscovery: ModuleDiscoveryService;
     /**
@@ -115,6 +122,7 @@ export function createAuthorityRuntime(): AuthorityRuntime {
     const locks = new LockService();
     const hostEvents = new HostEventLedgerService(core, locks);
     const nativeMigrations = new NativeMigrationService();
+    const extMgmt = new ExtMgmtService({ resolveSillyTavernRoot: () => install.getSillyTavernRoot() });
     const adminPackages = new AdminPackageService(core, extensions, permissions, policies, storage, files, trivium);
     const modules = new ModuleHostService(permissions, audit, trivium, storage, files, jobs, events, hostEvents);
     const moduleDiscovery = new ModuleDiscoveryService(install);
@@ -152,6 +160,7 @@ export function createAuthorityRuntime(): AuthorityRuntime {
         jobs,
         trivium,
         nativeMigrations,
+        extMgmt,
         modules,
         moduleDiscovery,
         locks,

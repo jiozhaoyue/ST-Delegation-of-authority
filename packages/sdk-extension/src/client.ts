@@ -35,6 +35,14 @@ import type {
     AuthorityHostEventRecord,
     AuthorityHostTransactionContext,
     AuthorityInitConfig,
+    AuthorityExtMgmtBackupDeleteRequest,
+    AuthorityExtMgmtBackupDeleteResponse,
+    AuthorityExtMgmtBackupListResponse,
+    AuthorityExtMgmtBackupRestoreRequest,
+    AuthorityExtMgmtBackupRestoreResponse,
+    AuthorityExtMgmtRebuildUpdateRequest,
+    AuthorityExtMgmtRebuildUpdateResponse,
+    AuthorityExtMgmtTarget,
     AuthorityPolicyEntry,
     AuthorityProbeResponse,
     BlobGetResponse,
@@ -662,6 +670,16 @@ export class AuthorityClient {
         getEvent: (eventId: string) => Promise<AuthorityHostEventRecord | null>;
         getConversation: (conversationId: string) => Promise<AuthorityHostConversationState | null>;
         listEvents: (request: AuthorityHostEventListRequest) => Promise<AuthorityHostEventListResponse>;
+    };
+
+    /** 扩展管理（仅管理员端点；能力探测走 probe.features.extMgmt）。 */
+    readonly extMgmt: {
+        rebuildUpdate: (request: AuthorityExtMgmtRebuildUpdateRequest) => Promise<AuthorityExtMgmtRebuildUpdateResponse>;
+        backups: {
+            list: (target: AuthorityExtMgmtTarget) => Promise<AuthorityExtMgmtBackupListResponse>;
+            restore: (request: AuthorityExtMgmtBackupRestoreRequest) => Promise<AuthorityExtMgmtBackupRestoreResponse>;
+            delete: (request: AuthorityExtMgmtBackupDeleteRequest) => Promise<AuthorityExtMgmtBackupDeleteResponse>;
+        };
     };
 
     readonly agent: {
@@ -1997,6 +2015,37 @@ export class AuthorityClient {
                     method: 'POST',
                     body: {},
                 });
+            },
+        };
+
+        this.extMgmt = {
+            rebuildUpdate: async request => {
+                await this.requireFeature('extMgmt.rebuildUpdate', 'Authority 当前版本尚未提供扩展管理（rebuildUpdate）能力');
+                return await this.requestWithSession<AuthorityExtMgmtRebuildUpdateResponse>('/ext-mgmt/rebuild-update', {
+                    method: 'POST',
+                    body: request,
+                });
+            },
+            backups: {
+                list: async target => {
+                    const query = new URLSearchParams({
+                        location: target.location,
+                        name: target.name,
+                    });
+                    return await this.requestWithSession<AuthorityExtMgmtBackupListResponse>(`/ext-mgmt/backups?${query.toString()}`);
+                },
+                restore: async request => {
+                    return await this.requestWithSession<AuthorityExtMgmtBackupRestoreResponse>('/ext-mgmt/backups/restore', {
+                        method: 'POST',
+                        body: request,
+                    });
+                },
+                delete: async request => {
+                    return await this.requestWithSession<AuthorityExtMgmtBackupDeleteResponse>('/ext-mgmt/backups/delete', {
+                        method: 'POST',
+                        body: request,
+                    });
+                },
             },
         };
 

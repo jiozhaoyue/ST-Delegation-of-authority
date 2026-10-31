@@ -31,7 +31,25 @@ export type AuthorityErrorCode =
     | 'workspace_conflict'
     | 'timeout'
     | 'core_unavailable'
-    | 'core_request_failed';
+    | 'core_request_failed'
+    /** ext-mgmt（扩展管理）能力组错误码，语义见 ext-mgmt.ts 三段式载荷 */
+    | 'ext_mgmt_invalid_target'
+    | 'ext_mgmt_invalid_branch'
+    | 'ext_mgmt_invalid_backup_id'
+    | 'ext_mgmt_target_not_found'
+    | 'ext_mgmt_backup_not_found'
+    | 'ext_mgmt_not_git_repo'
+    | 'ext_mgmt_no_commit'
+    | 'ext_mgmt_no_origin'
+    | 'ext_mgmt_detached_head'
+    | 'ext_mgmt_host_root_unavailable'
+    | 'ext_mgmt_user_root_unavailable'
+    | 'ext_mgmt_symlink_not_allowed'
+    | 'ext_mgmt_credentials_unsupported'
+    | 'ext_mgmt_git_remote_failed'
+    | 'ext_mgmt_candidate_tree_invalid'
+    | 'ext_mgmt_untracked_conflict'
+    | 'ext_mgmt_rebuild_mismatch';
 
 export interface AuthorityErrorPayload {
     error: string;

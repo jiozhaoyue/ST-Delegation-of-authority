@@ -194,5 +194,10 @@ export function buildAuthorityFeatureFlags(isAdmin: boolean, moduleCount = 0): A
             eventLedger: true,
             moduleContext: true,
         },
+        // 扩展管理能力组（ext-mgmt 路由组，PR-1 底座 + PR-2 rebuildUpdate）。
+        // 能力存在即标记 true（与 stBackup 同语义）；端点层仍有 assertAdminUser 门禁。
+        extMgmt: {
+            rebuildUpdate: true,
+        },
     };
 }

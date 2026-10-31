@@ -207,6 +207,15 @@
 - `/admin/agent/sessions*`
 - `/admin/agent/workspaces*`
 
+## 3.10 扩展管理（ext-mgmt）
+
+- `POST /ext-mgmt/rebuild-update`
+- `GET /ext-mgmt/backups?location=&name=`
+- `POST /ext-mgmt/backups/restore`
+- `POST /ext-mgmt/backups/delete`
+
+全部仅管理员；能力探测走 `POST /probe` 的 `features.extMgmt`。语义见 §13.13。
+
 ## 4. 接口语义详解
 
 ## 4.1 `POST /probe`
@@ -233,6 +242,8 @@
 - `installMessage`
 - `limits`
 - `core`
+- `features`
+  - 其中 `features.extMgmt.rebuildUpdate` 是扩展管理能力组的逐能力探测标记（见 §13.13）
 
 `core` 内又包含：
 
@@ -949,6 +960,135 @@ browser tool 的 register / claim / result 都要求有效 Authority session，�
 
 返回值同样是 `AuthorityArtifactDownloadResponse`，需要浏览器继续走 transfer read 下载。
 
+## 13.13 扩展管理（ext-mgmt）
+
+对「装进酒馆的扩展 / 服务端插件目录」（独立 Git 仓库）执行安全更新与备份管理。
+全部端点仅管理员（`request.user.profile.admin`），不要求 Authority session。
+能力探测走 `POST /probe` 的 `features.extMgmt.rebuildUpdate`，不设独立 capabilities 端点。
+
+### 目标定位（target）
+
+```json
+{ "location": "third-party", "name": "st-example" }
+```
+
+- `third-party`：`<ST 根>/public/scripts/extensions/third-party/<name>`（前端扩展）
+- `plugins`：`<ST 根>/plugins/<name>`（服务端插件）
+- `user-extensions`：`<用户数据根>/extensions/<name>`（用户私有扩展）
+
+安全边界：`name` 只允许一段目录名（字母、数字、点、下划线、连字符）；目标目录为
+symlink / junction 时拒绝（链接禁穿）；非 Git 仓库、无 HEAD、无 origin 均为前置失败。
+
+### `POST /ext-mgmt/rebuild-update`
+
+请求：
+
+```json
+{
+  "target": { "location": "third-party", "name": "st-example" },
+  "branch": "main",
+  "credentials": { "username": "oauth2", "token": "ghp_xxx" }
+}
+```
+
+- `branch` 缺省用目标仓库当前分支（detached HEAD 时必须显式传入）。
+- `credentials` **按请求内存注入**（不落盘）：仅 http/https 远端支持，拼进一次性
+  fetch URL，不写 remote 配置、不进任何持久层；所有 git 输出统一擦洗为 `[redacted]`。
+
+流程（全部通过 git 高层命令完成，任何失败路径保证「先校验后动手」）：
+
+1. preflight：`git status --short --branch` + 记录当前分支 / HEAD；
+2. depth-1 fetch 上游分支 → `refs/ext-mgmt/fetch/<name>`（不写远端配置）；
+3. 候选树校验：候选提交必须仍是可识别的扩展/插件（根标记文件比对），防对齐到无关仓库；
+4. 未跟踪冲突预检：候选树要写入的路径若被未跟踪文件占位 → `409`，**零变更**；
+5. 工作区快照（含未提交改动与未跟踪文件；临时 index，不触碰真实 index / HEAD）
+   自动提交到备份 ref `refs/ext-mgmt/backup/<name>/<ts>`；
+6. `git reset --hard <候选提交>` 原子重建 tracked 文件（未跟踪文件保留）。
+
+成功响应 `200`：
+
+```json
+{
+  "target": { "location": "third-party", "name": "st-example" },
+  "status": "updated",
+  "branch": "main",
+  "previousRevision": "<sha>",
+  "currentRevision": "<sha>",
+  "changed": true,
+  "dirty": true,
+  "backup": {
+    "backupId": "20261031T101500-ab12cd34",
+    "ref": "refs/ext-mgmt/backup/st-example/20261031T101500-ab12cd34",
+    "revision": "<sha>",
+    "parentRevision": "<sha>",
+    "createdAt": "...",
+    "message": "ext-mgmt backup third-party/st-example (dirty)",
+    "dirty": true
+  },
+  "untrackedPreservedCount": 2,
+  "preflightStatus": "## main...origin/main [behind 1]",
+  "updatedAt": "..."
+}
+```
+
+语义说明：
+
+- rebuild 是「对齐上游」语义（非 ff 合并）：本地分支直接指到候选提交；
+  更新前的本地提交仍可通过备份 ref 的父链到达；
+- 已最新且工作区干净时返回 `already_up_to_date`，不创建备份、零变更；
+- 已最新但工作区有改动时仍执行备份 + 重建（把 tracked 文件恢复为上游内容）。
+
+### `GET /ext-mgmt/backups?location=<..>&name=<..>`
+
+列出目标目录的备份 ref（新 → 旧）：
+
+```json
+{
+  "target": { "location": "third-party", "name": "st-example" },
+  "backups": [
+    { "backupId": "…", "ref": "refs/ext-mgmt/backup/…", "revision": "<sha>", "parentRevision": "<sha>", "createdAt": "…", "message": "…", "dirty": false }
+  ],
+  "count": 1,
+  "generatedAt": "…"
+}
+```
+
+### `POST /ext-mgmt/backups/restore`
+
+请求 `{ "target": { … }, "backupId": "…" }`。恢复前先自动创建 pre-restore 快照
+（当前状态含未提交改动先备份，返回字段 `preRestoreBackupId`），再 `reset --hard`
+到备份提交。响应：
+
+```json
+{ "target": { … }, "backupId": "…", "revision": "<sha>", "preRestoreBackupId": "…", "restoredAt": "…" }
+```
+
+### `POST /ext-mgmt/backups/delete`
+
+请求 `{ "target": { … }, "backupId": "…" }`。仅删除备份 ref，不动工作区。
+响应：`{ "target": { … }, "backupId": "…", "deleted": true }`。
+
+### 错误三段式
+
+ext-mgmt 能力错误统一为三段式载荷（HTTP 400 / 404 / 409 / 502；机器码同时落在
+`error` 与 `code`，`category` 沿用既有分类）：
+
+```json
+{
+  "error": "ext_mgmt_git_remote_failed",
+  "code": "ext_mgmt_git_remote_failed",
+  "category": "core",
+  "reason": "从 origin 拉取分支 main 的 depth-1 快照失败。",
+  "remedy": "检查网络与 origin 远端可达性；私有仓请随请求注入凭据。"
+}
+```
+
+常见机器码：`ext_mgmt_invalid_target` / `ext_mgmt_invalid_branch` / `ext_mgmt_target_not_found` /
+`ext_mgmt_not_git_repo` / `ext_mgmt_no_commit` / `ext_mgmt_no_origin` / `ext_mgmt_detached_head` /
+`ext_mgmt_host_root_unavailable` / `ext_mgmt_user_root_unavailable` / `ext_mgmt_symlink_not_allowed` /
+`ext_mgmt_credentials_unsupported` / `ext_mgmt_git_remote_failed` / `ext_mgmt_candidate_tree_invalid` /
+`ext_mgmt_untracked_conflict` / `ext_mgmt_backup_not_found` / `ext_mgmt_rebuild_mismatch`。
+
 ## 14. 返回码与错误处理
 
 常见情况：
@@ -996,6 +1136,8 @@ browser tool 的 register / claim / result 都要求有效 Authority session，�
 - `timeout`
 - `core_unavailable`
 - `core_request_failed`
+- `ext_mgmt_*`
+  - 扩展管理能力组（§13.13）专用机器码，载荷附三段式 `reason` / `remedy`
 
 ### 14.1 503 taxonomy
 

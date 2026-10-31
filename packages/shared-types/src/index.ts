@@ -4,6 +4,7 @@ export type * from './admin-packages.js';
 export type * from './common.js';
 export type * from './control.js';
 export type * from './diagnostics.js';
+export type * from './ext-mgmt.js';
 export type * from './http.js';
 export type * from './host.js';
 export type * from './jobs.js';

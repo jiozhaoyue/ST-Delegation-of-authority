@@ -53,6 +53,7 @@ import { listPrivateSqlDatabases, registerSqlRoutes } from './routes/sql-routes.
 import { registerHttpRoutes } from './routes/http-routes.js';
 import { registerHostRoutes } from './routes/host-routes.js';
 import { registerBackupRoutes } from './routes/backup-routes.js';
+import { registerExtMgmtRoutes } from './routes/ext-mgmt-routes.js';
 import { registerModuleRoutes } from './routes/module-routes.js';
 import { registerRegistryRoutes } from './routes/registry-routes.js';
 import { registerAgentHistoryRoutes } from './routes/agent-history-routes.js';
@@ -784,6 +785,9 @@ export function registerRoutes(router: RouterLike, runtime = createAuthorityRunt
 
     // ST 选择性备份（任务 10-25-st-backup-capability）：ST 原生端点必全量，此处补类目级选择
     registerBackupRoutes(router, runtime, fail);
+
+    // 扩展管理（ext-mgmt，PR-1 底座 + PR-2 rebuildUpdate）：仅管理员，能力探测走 probe features.extMgmt
+    registerExtMgmtRoutes(router, runtime, fail);
 
     registerModuleRoutes(router, runtime, fail);
 

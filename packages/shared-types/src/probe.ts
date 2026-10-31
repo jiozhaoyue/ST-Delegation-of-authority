@@ -1,4 +1,5 @@
 import type { AuthorityEffectiveInlineThresholds, AuthorityEffectiveOperationByteLimits } from './common.js';
+import type { AuthorityExtMgmtFeatureFlags } from './ext-mgmt.js';
 
 export type AuthorityInstallStatusCode = 'ready' | 'installed' | 'updated' | 'conflict' | 'error' | 'missing';
 
@@ -51,6 +52,8 @@ export interface AuthorityFeatureFlags {
         eventLedger: boolean;
         moduleContext: boolean;
     };
+    /** 扩展管理能力组（ext-mgmt 路由组）：逐能力探测标记，仅管理员端点。 */
+    extMgmt: AuthorityExtMgmtFeatureFlags;
 }
 
 export interface AuthorityProbeHostBridgeStatus {
