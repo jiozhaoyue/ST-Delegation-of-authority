@@ -1,0 +1,32 @@
+{
+  "id": "multi-repo-rules-skills-survey",
+  "name": "multi-repo-rules-skills-survey",
+  "title": "多仓规则提炼·全景调查·Skill体系与需求整理",
+  "description": "跨 My-repo/Myfork/JS-Slash-Runner 三处仓库群：1)提炼自定义规则写入本仓Trellis与各agent规则并同步回各仓；2)全景调查所有仓库与ST-Delegation-of-authority插件理解开发意图；3)按luker开发文档与开发经验产出skills并统一开发环境规则(实例/端口/浏览器自动化/经验留存)；4)整理用户全部草稿需求为任务地图",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "jiozhaoyue",
+  "assignee": "jiozhaoyue",
+  "createdAt": "2026-09-21",
+  "completedAt": "2026-09-24",
+  "branch": "main",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-22-luker-dev-skill",
+    "09-22-tavern-workflow-skill",
+    "09-22-tavern-dev-env-rules",
+    "09-22-tavern-repo-atlas",
+    "09-22-authority-ecosystem-pr-strategy"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/authority-core/backend/database-guidelines.md", "reason": "新增 SQL 能力的落点（进 sql.rs、值类型经 sql_types.rs）与「文件布局不是公开合同」纪律——本任务换存储引擎的合法性依据"}
+{"file": ".trellis/spec/server-plugin/backend/version-binding.md", "reason": "最小侵入纪律：改动既有判定必须走「新增并行判定 + 保留旧判定」（§4）——后端选择分支的写法约束"}
+{"file": ".trellis/spec/authority-core/backend/directory-structure.md", "reason": "core 模块落点与命名——新增 pg/ 目录的位置依据"}
+{"file": ".trellis/spec/authority-core/backend/quality-guidelines.md", "reason": "质量门与验证命令（npm test 已含 cargo test）"}

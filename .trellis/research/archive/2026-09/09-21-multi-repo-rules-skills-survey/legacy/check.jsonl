@@ -1,0 +1,7 @@
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/prd.md", "reason": "对照 AC-1..AC-7 逐条验收；重点核 AC-7 全局约束（实例零改动、同步写操作须先 dry-run 并获用户批准、子代理模型固定为 claude-haiku-4-5-20251001）"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/design.md", "reason": "核对实现是否符合同步器算法（哈希只算正文以保幂等、marker 唯一成对）、规则分层边界（L2 永不参与同步）、任务地图与 L1..L12/N-1..N-9 登记完整性"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/implement.md", "reason": "核对各 Phase 的 Gate 是否真正通过、验证命令是否实际执行、复选框是否随执行实时勾选（禁止事后补勾）；核对 Phase H 中的 bootstrap 职责冲突是否已处置"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/research/08-prior-unified-rules-archaeology.md", "reason": "重点核查：前作四个致命伤（真源不在 git / 同步器有损截断 / 条目过时 / 覆盖不全）是否在本次设计中全部被规避；每条规则是否都带「原因 + 违反后果」"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/research/09-consolidated-rules-and-distribution-precedents.md", "reason": "核对 L0/L1 分层是否与实证一致；核对 D2/D7 裁定是否正确落实（自包含块 + L0 标注「与全局 CLAUDE.md 同源」）"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/research/07-authority-host-compat-verification.md", "reason": "核对「跨宿主插件禁用 Host Bridge」硬约束是否写入统一规则；核对残留未验项是否被如实标注而非掩盖"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/research/INDEX.md", "reason": "【必读】研究产出索引（含 06 实例端口实测、01/02/03/05 大文件）。核查 AC-7 实例零改动红线与 N-1/N-2 处理时，按索引 Read 06；大文件须回源抽查，不得仅凭内联文件下结论"}

@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/authority-core/backend/quality-guidelines.md", "reason": "复检质量门：单测+构建+产物一致性"}
+{"file": ".trellis/spec/authority-core/backend/error-handling.md", "reason": "错误归因与「不静默吞错」——降级回执必须带真原因"}
+{"file": ".trellis/spec/sdk-extension/frontend/consumer-contract.md", "reason": "消费者降级语义 D1-D4——PG 不可用时消费者的显式降级路径"}
+{"file": ".trellis/spec/shared-types/backend/capability-lifecycle.md", "reason": "能力登记纪律（本任务不落地真源，但阶段/边界声明方向须遵守）"}

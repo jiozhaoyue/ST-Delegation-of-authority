@@ -1,0 +1,31 @@
+{
+  "id": "tavern-project-bootstrap",
+  "name": "tavern-project-bootstrap",
+  "title": "酒馆项目脚手架：Trellis 原生模板与云同步",
+  "description": "用 Trellis 原生机制（workflow 模板市场 + registry.spec）把酒馆项目偏好与本地环境固化为可一键套用的模板，并云同步",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "jiozhaoyue",
+  "assignee": "jiozhaoyue",
+  "createdAt": "2026-09-25",
+  "completedAt": "2026-09-25",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-25-authority-backlog-closeout",
+    "09-25-tavern-harness-advance",
+    "09-25-trellis-tavern-template",
+    "09-25-remove-subagent-model-gate"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

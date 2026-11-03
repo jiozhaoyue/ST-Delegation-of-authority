@@ -1,0 +1,7 @@
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/design.md", "reason": "【实现直接依据】真源定稿（私有仓 + 每次推送）、规则分层 L0/L1/L2、同步块格式与 D7 同源标注、同步器算法与幂等性（哈希只算正文）、任务地图 C-01..C-09 / L1..L12 / N-1..N-9"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/research/09-consolidated-rules-and-distribution-precedents.md", "reason": "【要写入真源的规则内容】L0 12 条 + L1 三仓群差异 + 两种分发范式实证对比——C-01 编写 unified-development-rules.md 的素材主体"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/research/08-prior-unified-rules-archaeology.md", "reason": "【必须规避的反面教材】前作 4 个致命伤与 8 条硬性要求；C-03/C-04 编写时必须逐条对照，禁止重现内容截断与条目过时"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/research/07-authority-host-compat-verification.md", "reason": "【硬约束来源】跨宿主插件禁用 Host Bridge（C-07 要写入的规则）；四宿主可用性结论与残留未验项"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/research/10-trellis-integration-and-plugin-governance.md", "reason": "【C-09 依据】Trellis 无预设机制但承诺块外内容不被覆盖；薄封装 tavern-init 方案；不改 npm 包模板的理由"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/prd.md", "reason": "需求 R1-R6、验收 AC-1..AC-7、约束 8 条、已裁定 D1/D2/D4/D7 与待裁定 D3/D5/D6、新增 N-1..N-9"}
+{"file": ".trellis/tasks/09-21-multi-repo-rules-skills-survey/research/INDEX.md", "reason": "【必读】10 份研究产出的索引：各文件体积、内容与「何时读」。大文件（01/02/03/05）超出注入上限已故意未内联，需按索引按需 Read，勿凭印象作答"}

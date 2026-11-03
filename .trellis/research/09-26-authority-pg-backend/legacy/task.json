@@ -1,0 +1,28 @@
+{
+  "id": "authority-pg-backend",
+  "name": "authority-pg-backend",
+  "title": "Authority 数据库后端（PostgreSQL + MySQL · 跟随宿主 storage.mode · DB 级隔离 · 不可用回落）",
+  "description": "在 Authority fork 内建真实数据库后端（PostgreSQL + MySQL）：每 (用户×扩展) 独立命名空间 + 专属数据库账号，DB 级强隔离；存储跟随宿主 Luker 的 storage.mode（fs/sqlite 维持现状，postgres/mysql 复用宿主连接信息与自有命名空间）；不可用静默回落本地 SQLite；SDK client.sql.* 契约零改。首波不含限容与审计。加密隐私要求作为 schema 设计约束预留。",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P0",
+  "creator": "jiozhaoyue",
+  "assignee": "jiozhaoyue",
+  "createdAt": "2026-09-26",
+  "completedAt": null,
+  "branch": "main",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "note": "标题与描述以顶层 title / description 为唯一真源（本节点不留副本，避免两处漂移）"
+  }
+}
