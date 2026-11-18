@@ -184,7 +184,7 @@ export interface InstallStatusSnapshot {
     coreMessage: string | null;
 }
 
-export type HostBridgeStatusCode = 'missing' | 'ready' | 'installed' | 'updated' | 'rolled_back' | 'conflict' | 'error';
+export type HostBridgeStatusCode = 'missing' | 'ready' | 'installed' | 'updated' | 'rolled_back' | 'conflict' | 'error' | 'unsupported';
 
 export interface HostBridgeStatusSnapshot {
     status: HostBridgeStatusCode;

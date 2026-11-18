@@ -54,7 +54,7 @@ export interface AuthorityFeatureFlags {
 }
 
 export interface AuthorityProbeHostBridgeStatus {
-    status: 'missing' | 'ready' | 'installed' | 'updated' | 'rolled_back' | 'conflict' | 'error';
+    status: 'missing' | 'ready' | 'installed' | 'updated' | 'rolled_back' | 'conflict' | 'error' | 'unsupported';
     message: string;
     bridgeVersion: string | null;
     hostPackageVersion: string | null;

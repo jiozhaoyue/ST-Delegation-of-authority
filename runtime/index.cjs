@@ -349,12 +349,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _routes_sql_routes_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./routes/sql-routes.js */ "./src/routes/sql-routes.ts");
 /* harmony import */ var _routes_http_routes_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./routes/http-routes.js */ "./src/routes/http-routes.ts");
 /* harmony import */ var _routes_host_routes_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./routes/host-routes.js */ "./src/routes/host-routes.ts");
-/* harmony import */ var _routes_module_routes_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./routes/module-routes.js */ "./src/routes/module-routes.ts");
-/* harmony import */ var _routes_registry_routes_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./routes/registry-routes.js */ "./src/routes/registry-routes.ts");
-/* harmony import */ var _routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./routes/agent-history-routes.js */ "./src/routes/agent-history-routes.ts");
-/* harmony import */ var _routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./routes/agent-routes.js */ "./src/routes/agent-routes.ts");
-/* harmony import */ var _runtime_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./runtime.js */ "./src/runtime.ts");
-/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./utils.js */ "./src/utils.ts");
+/* harmony import */ var _routes_backup_routes_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./routes/backup-routes.js */ "./src/routes/backup-routes.ts");
+/* harmony import */ var _routes_module_routes_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./routes/module-routes.js */ "./src/routes/module-routes.ts");
+/* harmony import */ var _routes_registry_routes_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./routes/registry-routes.js */ "./src/routes/registry-routes.ts");
+/* harmony import */ var _routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./routes/agent-history-routes.js */ "./src/routes/agent-history-routes.ts");
+/* harmony import */ var _routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./routes/agent-routes.js */ "./src/routes/agent-routes.ts");
+/* harmony import */ var _runtime_js__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./runtime.js */ "./src/runtime.ts");
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./utils.js */ "./src/utils.ts");
+
 
 
 
@@ -378,7 +380,7 @@ function ok(res, data) {
 function fail(runtime, req, res, extensionId, error) {
     const normalized = normalizeAuthorityError(error);
     try {
-        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
         if (normalized.payload.category === 'permission' && isPermissionErrorDetails(normalized.payload.details)) {
             void runtime.audit.logPermission(user, extensionId, 'Permission denied', {
                 ...normalized.payload.details,
@@ -403,7 +405,7 @@ function buildPermissionErrorPayload(message) {
         return null;
     }
     const target = match[2]?.trim();
-    const descriptor = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.buildPermissionDescriptor)(resource, target);
+    const descriptor = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.buildPermissionDescriptor)(resource, target);
     return {
         error: message,
         code: 'permission_not_granted',
@@ -438,13 +440,13 @@ function isPermissionErrorDetails(value) {
         && 'riskLevel' in value;
 }
 function normalizeAuthorityError(error) {
-    if ((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.isAuthorityServiceError)(error)) {
+    if ((0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.isAuthorityServiceError)(error)) {
         return {
             status: error.status,
             payload: error.toPayload(),
         };
     }
-    const message = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.asErrorMessage)(error);
+    const message = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.asErrorMessage)(error);
     const permissionErrorPayload = buildPermissionErrorPayload(message);
     if (permissionErrorPayload) {
         return {
@@ -606,6 +608,9 @@ async function buildProbeResponse(runtime, user) {
     return {
         id: 'authority',
         online: true,
+        // ST 选择性备份能力标记（10-25-st-backup-capability）：消费方据此前置特性检测，
+        // 未装 Authority 的宿主维持原生全量路径（L0-11 适配器降级）
+        stBackup: true,
         version: install.pluginVersion,
         pluginId: _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_PLUGIN_ID,
         sdkExtensionId: _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID,
@@ -833,15 +838,15 @@ function shouldRedactDiagnosticKey(key) {
         || normalized.includes('token')
         || normalized.includes('secret');
 }
-function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODULE_14__.createAuthorityRuntime)()) {
+function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODULE_15__.createAuthorityRuntime)()) {
     router.post('/probe', async (req, res) => {
-        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+        const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
         ok(res, await buildProbeResponse(runtime, user));
     });
     (0,_routes_st_manager_routes_js__WEBPACK_IMPORTED_MODULE_3__.registerStManagerRoutes)(router, runtime, fail);
     router.post('/session/init', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             const config = (req.body ?? {});
             const session = await runtime.sessions.createSession(user, config);
             const grants = await runtime.permissions.listPersistentGrants(user, session.extension.id);
@@ -856,8 +861,8 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/session/current', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getSessionToken)(req), user);
             const limits = await runtime.permissions.getEffectiveSessionLimits(user, session.extension.id);
             ok(res, runtime.sessions.buildSessionResponse(session, await runtime.permissions.listPersistentGrants(user, session.extension.id), await runtime.permissions.getPolicyEntries(user, session.extension.id), limits, runtime.modules.visibleCount()));
         }
@@ -867,8 +872,8 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/permissions/evaluate', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getSessionToken)(req), user);
             const evaluation = await runtime.permissions.evaluate(user, session, req.body);
             if (evaluation.decision === 'denied' || evaluation.decision === 'blocked') {
                 await runtime.audit.logPermission(user, session.extension.id, 'Permission denied', {
@@ -886,11 +891,11 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/permissions/evaluate-batch', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getSessionToken)(req), user);
             const payload = (req.body ?? {});
             if (payload.requests !== undefined && !Array.isArray(payload.requests)) {
-                throw new _utils_js__WEBPACK_IMPORTED_MODULE_15__.AuthorityServiceError('Permission batch requests must be an array', 400, 'validation_error', 'validation');
+                throw new _utils_js__WEBPACK_IMPORTED_MODULE_16__.AuthorityServiceError('Permission batch requests must be an array', 400, 'validation_error', 'validation');
             }
             const results = await runtime.permissions.evaluateBatch(user, session, payload.requests ?? []);
             const response = { results };
@@ -902,8 +907,8 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/permissions/resolve', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
-            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getSessionToken)(req), user);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
+            const session = await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getSessionToken)(req), user);
             const payload = req.body;
             const grant = await runtime.permissions.resolve(user, session, payload, payload.choice);
             await runtime.audit.logPermission(user, session.extension.id, grant.status === 'denied' ? 'Permission denied' : 'Permission granted', {
@@ -920,7 +925,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/extensions', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             const list = await Promise.all((await runtime.extensions.listExtensions(user)).map(async (extension) => {
                 const grants = await runtime.permissions.listPersistentGrants(user, extension.id);
                 const sqlDatabases = (await (0,_routes_sql_routes_js__WEBPACK_IMPORTED_MODULE_7__.listPrivateSqlDatabases)(runtime, user, extension.id)).databases;
@@ -940,7 +945,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/extensions/:id', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             const extensionId = decodeURIComponent(req.params?.id ?? '');
             const extension = await runtime.extensions.getExtension(user, extensionId);
             if (!extension) {
@@ -968,7 +973,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/extensions/:id/grants/reset', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             const extensionId = decodeURIComponent(req.params?.id ?? '');
             await runtime.permissions.resetPersistentGrants(user, extensionId, req.body?.keys);
             await runtime.audit.logPermission(user, extensionId, 'Persistent grants reset', {
@@ -989,15 +994,17 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     (0,_routes_sql_routes_js__WEBPACK_IMPORTED_MODULE_7__.registerSqlRoutes)(router, runtime, fail);
     (0,_routes_trivium_routes_js__WEBPACK_IMPORTED_MODULE_6__.registerTriviumRoutes)(router, runtime, fail);
     (0,_routes_host_routes_js__WEBPACK_IMPORTED_MODULE_9__.registerHostRoutes)(router, runtime, fail);
-    (0,_routes_module_routes_js__WEBPACK_IMPORTED_MODULE_10__.registerModuleRoutes)(router, runtime, fail);
-    (0,_routes_registry_routes_js__WEBPACK_IMPORTED_MODULE_11__.registerRegistryRoutes)(router, runtime, fail);
+    // ST 选择性备份（任务 10-25-st-backup-capability）：ST 原生端点必全量，此处补类目级选择
+    (0,_routes_backup_routes_js__WEBPACK_IMPORTED_MODULE_10__.registerBackupRoutes)(router, runtime, fail);
+    (0,_routes_module_routes_js__WEBPACK_IMPORTED_MODULE_11__.registerModuleRoutes)(router, runtime, fail);
+    (0,_routes_registry_routes_js__WEBPACK_IMPORTED_MODULE_12__.registerRegistryRoutes)(router, runtime, fail);
     (0,_routes_http_routes_js__WEBPACK_IMPORTED_MODULE_8__.registerHttpRoutes)(router, runtime, fail);
     (0,_routes_jobs_events_routes_js__WEBPACK_IMPORTED_MODULE_5__.registerJobsAndEventsRoutes)(router, runtime, fail);
-    (0,_routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_12__.registerAgentHistoryRoutes)(router, runtime, fail);
-    (0,_routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_13__.registerAgentRoutes)(router, runtime, fail);
+    (0,_routes_agent_history_routes_js__WEBPACK_IMPORTED_MODULE_13__.registerAgentHistoryRoutes)(router, runtime, fail);
+    (0,_routes_agent_routes_js__WEBPACK_IMPORTED_MODULE_14__.registerAgentRoutes)(router, runtime, fail);
     router.get('/admin/policies', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             if (!user.isAdmin) {
                 throw new Error('Forbidden');
             }
@@ -1009,7 +1016,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/policies', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             const result = await runtime.policies.saveGlobalPolicies(user, req.body ?? {});
             await runtime.audit.logUsage(user, 'third-party/st-authority-sdk', 'Policies updated');
             ok(res, result);
@@ -1020,7 +1027,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/usage-summary', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, await buildUsageSummary(runtime, user));
         }
@@ -1030,7 +1037,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/import-export/operations', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, {
                 operations: runtime.adminPackages.listOperations(user),
@@ -1042,7 +1049,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/export', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             const operation = runtime.adminPackages.startExport(user, (req.body ?? {}));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Export package started', {
@@ -1057,7 +1064,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/import-transfer/init', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, await runtime.transfers.init(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, {
                 resource: 'fs.private',
@@ -1070,7 +1077,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/import', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             const payload = (req.body ?? {});
             const transfer = runtime.transfers.get(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, String(payload.transferId ?? ''), 'fs.private');
@@ -1089,7 +1096,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/operations/:id/resume', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             const operation = runtime.adminPackages.resume(user, String(req.params?.id ?? ''));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Import/export operation resumed', {
@@ -1104,7 +1111,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/import-export/operations/:id/open-download', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             const artifact = runtime.adminPackages.getArtifact(user, String(req.params?.id ?? ''));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Import/export artifact opened', {
@@ -1119,7 +1126,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/native-migration/operations', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, {
                 operations: runtime.nativeMigrations.listOperations(),
@@ -1131,7 +1138,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/upload/init', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             const sizeBytes = parseNativeMigrationSizeBytes(req.body?.sizeBytes);
             ok(res, await runtime.transfers.init(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, {
@@ -1145,7 +1152,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/preview', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             const payload = (req.body ?? {});
             const transfer = runtime.transfers.get(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, String(payload.transferId ?? ''), 'fs.private');
@@ -1168,7 +1175,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/operations/:id/apply', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             const payload = (req.body ?? {});
             const operation = await runtime.nativeMigrations.apply(String(req.params?.id ?? ''), payload.mode ?? 'skip');
@@ -1188,7 +1195,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/native-migration/operations/:id/rollback', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             const operation = runtime.nativeMigrations.rollback(String(req.params?.id ?? ''));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Native migration rolled back', {
@@ -1203,7 +1210,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.get('/admin/diagnostic-bundle', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             ok(res, await buildDiagnosticBundle(runtime, user));
         }
@@ -1213,7 +1220,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/diagnostic-bundle/archive', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             assertAdminUser(user);
             const artifact = runtime.adminPackages.createDiagnosticArchive(user, await buildDiagnosticBundle(runtime, user));
             await runtime.audit.logUsage(user, _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID, 'Diagnostic archive created', {
@@ -1228,7 +1235,7 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
     });
     router.post('/admin/update', async (req, res) => {
         try {
-            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.getUserContext)(req);
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.getUserContext)(req);
             if (!user.isAdmin) {
                 throw new Error('Forbidden');
             }
@@ -1281,9 +1288,9 @@ function registerRoutes(router, runtime = (0,_runtime_js__WEBPACK_IMPORTED_MODUL
                         : `更新失败后后台服务状态为 ${recovery.state}。`;
                 }
                 catch (recoveryError) {
-                    recoveryMessage = `更新失败且后台服务恢复失败：${(0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.asErrorMessage)(recoveryError)}`;
+                    recoveryMessage = `更新失败且后台服务恢复失败：${(0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.asErrorMessage)(recoveryError)}`;
                 }
-                throw new Error(`${(0,_utils_js__WEBPACK_IMPORTED_MODULE_15__.asErrorMessage)(error)} ${recoveryMessage}`.trim());
+                throw new Error(`${(0,_utils_js__WEBPACK_IMPORTED_MODULE_16__.asErrorMessage)(error)} ${recoveryMessage}`.trim());
             }
         }
         catch (error) {
@@ -2084,6 +2091,211 @@ function withAuthorityAdmin(runtime, fail, handler) {
             fail(runtime, req, res, extensionId, error);
         }
     };
+}
+
+
+/***/ },
+
+/***/ "./src/routes/backup-routes.ts"
+/*!*************************************!*\
+  !*** ./src/routes/backup-routes.ts ***!
+  \*************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   registerBackupRoutes: () => (/* binding */ registerBackupRoutes)
+/* harmony export */ });
+/* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! node:fs/promises */ "node:fs/promises");
+/* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(node_fs_promises__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! node:path */ "node:path");
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(node_path__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _constants_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../constants.js */ "./src/constants.ts");
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils.js */ "./src/utils.ts");
+
+
+
+
+/** ST 标准类目 → 用户数据根下的路径（目录或单文件）。空数组占位=该类目无对应路径。 */
+const CATEGORY_PATHS = {
+    characters: ['characters'],
+    chats: ['chats'],
+    lorebooks: ['worlds'],
+    presets: ['OpenAI Settings', 'KoboldAI Settings', 'NovelAI Settings', 'TextGen Settings', 'context', 'instruct', 'sysprompt', 'reasoning', 'QuickReplies'],
+    settings: ['settings.json'],
+    secrets: ['secrets.json'],
+    assets: ['User Avatars', 'backgrounds', 'themes'],
+    extensions: ['extensions'],
+    globalExtensions: [],
+    vectors: ['vectors'],
+};
+/** CRC-32（IEEE 802.3，查表法）——stored zip 条目的必要校验 */
+const CRC_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < 256; i += 1) {
+        let c = i;
+        for (let k = 0; k < 8; k += 1)
+            c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        table[i] = c >>> 0;
+    }
+    return table;
+})();
+function crc32(buf, seed = 0) {
+    let c = (seed ^ 0xffffffff) >>> 0;
+    for (let i = 0; i < buf.length; i += 1)
+        c = ((CRC_TABLE[(c ^ buf[i]) & 0xff] ?? 0) ^ (c >>> 8)) >>> 0;
+    return (c ^ 0xffffffff) >>> 0;
+}
+/** 收集一个类目路径（目录递归 / 单文件直收）下全部文件；不存在则静默跳过（该类目为空） */
+async function collectFiles(absRoot, relPath, out) {
+    const abs = node_path__WEBPACK_IMPORTED_MODULE_1___default().join(absRoot, relPath);
+    let stat;
+    try {
+        stat = await node_fs_promises__WEBPACK_IMPORTED_MODULE_0___default().stat(abs);
+    }
+    catch {
+        return; // 类目路径不存在 = 该类目为空
+    }
+    if (stat.isFile()) {
+        out.push({ rel: relPath, abs });
+        return;
+    }
+    if (!stat.isDirectory())
+        return;
+    let dirEntries;
+    try {
+        dirEntries = await node_fs_promises__WEBPACK_IMPORTED_MODULE_0___default().readdir(abs, { withFileTypes: true });
+    }
+    catch {
+        return;
+    }
+    for (const d of dirEntries) {
+        if (d.name === '.git' || d.name === 'node_modules')
+            continue;
+        const rel = `${relPath}/${d.name}`;
+        if (d.isDirectory())
+            await collectFiles(absRoot, rel, out);
+        else if (d.isFile())
+            out.push({ rel, abs: node_path__WEBPACK_IMPORTED_MODULE_1___default().join(absRoot, rel) });
+    }
+}
+function dosDateTime(date) {
+    const time = ((date.getHours() & 0x1f) << 11) | ((date.getMinutes() & 0x3f) << 5) | ((Math.floor(date.getSeconds() / 2)) & 0x1f);
+    const d = (((date.getFullYear() - 1980) & 0x7f) << 9) | (((date.getMonth() + 1) & 0x0f) << 5) | (date.getDate() & 0x1f);
+    return { time, date: d };
+}
+function localHeader(nameBuf, crc, size, { time, date }) {
+    const h = Buffer.alloc(30);
+    h.writeUInt32LE(0x04034b50, 0); // signature
+    h.writeUInt16LE(20, 4); // version needed
+    h.writeUInt16LE(0, 6); // flags
+    h.writeUInt16LE(0, 8); // method: stored
+    h.writeUInt16LE(time, 10);
+    h.writeUInt16LE(date, 12);
+    h.writeUInt32LE(crc, 14);
+    h.writeUInt32LE(size, 18); // compressed
+    h.writeUInt32LE(size, 22); // uncompressed
+    h.writeUInt16LE(nameBuf.length, 26);
+    h.writeUInt16LE(0, 28); // extra len
+    return h;
+}
+function centralRecord(meta, { time, date }) {
+    const nameBuf = Buffer.from(meta.name, 'utf8');
+    const h = Buffer.alloc(46);
+    h.writeUInt32LE(0x02014b50, 0);
+    h.writeUInt16LE(20, 4); // version made by
+    h.writeUInt16LE(20, 6); // version needed
+    h.writeUInt16LE(0, 8);
+    h.writeUInt16LE(0, 10); // stored
+    h.writeUInt16LE(time, 12);
+    h.writeUInt16LE(date, 14);
+    h.writeUInt32LE(meta.crc, 16);
+    h.writeUInt32LE(meta.size, 20);
+    h.writeUInt32LE(meta.size, 24);
+    h.writeUInt16LE(nameBuf.length, 28);
+    h.writeUInt16LE(0, 30); // extra
+    h.writeUInt16LE(0, 32); // comment
+    h.writeUInt16LE(0, 34); // disk
+    h.writeUInt16LE(0, 36); // internal attrs
+    h.writeUInt32LE(0, 38); // external attrs
+    h.writeUInt32LE(meta.offset, 42);
+    return Buffer.concat([h, nameBuf]);
+}
+function endRecord(count, cdSize, cdOffset) {
+    const h = Buffer.alloc(22);
+    h.writeUInt32LE(0x06054b50, 0);
+    h.writeUInt16LE(0, 4);
+    h.writeUInt16LE(0, 6);
+    h.writeUInt16LE(count, 8);
+    h.writeUInt16LE(count, 10);
+    h.writeUInt32LE(cdSize, 12);
+    h.writeUInt32LE(cdOffset, 16);
+    h.writeUInt16LE(0, 20);
+    return h;
+}
+function registerBackupRoutes(router, runtime, fail) {
+    router.post('/host/st-backup', async (req, res) => {
+        const extensionId = _constants_js__WEBPACK_IMPORTED_MODULE_2__.AUTHORITY_SDK_EXTENSION_ID;
+        try {
+            const user = (0,_utils_js__WEBPACK_IMPORTED_MODULE_3__.getUserContext)(req);
+            await runtime.sessions.assertSession((0,_utils_js__WEBPACK_IMPORTED_MODULE_3__.getSessionToken)(req), user);
+            const selection = (req.body && typeof req.body.selection === 'object' && req.body.selection)
+                ? req.body.selection : {};
+            const known = Object.keys(CATEGORY_PATHS);
+            const chosen = known.filter((k) => selection[k] === true);
+            if (chosen.length === 0) {
+                res.status(400).json({ error: 'At least one backup category must be selected.', code: 'bad-request' });
+                return;
+            }
+            const rootDir = String(user.directories?.root ?? user.rootDir ?? '');
+            if (!rootDir) {
+                res.status(500).json({ error: 'Host user data root unavailable.', code: 'internal' });
+                return;
+            }
+            const files = [];
+            for (const category of chosen) {
+                for (const rel of CATEGORY_PATHS[category] ?? []) {
+                    await collectFiles(String(rootDir), rel, files);
+                }
+            }
+            // 流式写出 stored zip：逐文件 local header + 分块数据；最后集中 central directory
+            res.setHeader('Content-Type', 'application/zip');
+            res.setHeader('Content-Disposition', `attachment; filename="${user.handle}-selective.zip"`);
+            res.setHeader('Transfer-Encoding', 'chunked');
+            const stamp = dosDateTime(new Date());
+            const metas = [];
+            let offset = 0;
+            for (const file of files) {
+                const stat = await node_fs_promises__WEBPACK_IMPORTED_MODULE_0___default().stat(file.abs);
+                const nameBuf = Buffer.from(file.rel, 'utf8');
+                const crc = crc32(await node_fs_promises__WEBPACK_IMPORTED_MODULE_0___default().readFile(file.abs)); // 读一次算 CRC（文件级驻留；
+                // 类目资产多为中小文件；超大单文件优化留待需要时改两遍流式）
+                const header = localHeader(nameBuf, crc, stat.size, stamp);
+                res.write(header);
+                res.write(nameBuf);
+                await new Promise((resolve, reject) => {
+                    const stream = (__webpack_require__(/*! node:fs */ "node:fs").createReadStream)(file.abs, { highWaterMark: 1 << 20 });
+                    stream.on('data', (chunk) => { res.write(chunk); });
+                    stream.on('end', () => resolve());
+                    stream.on('error', reject);
+                });
+                metas.push({ name: file.rel, crc, size: stat.size, offset });
+                offset += header.length + nameBuf.length + stat.size;
+            }
+            const cdOffset = offset;
+            let cdSize = 0;
+            for (const meta of metas) {
+                const rec = centralRecord(meta, stamp);
+                res.write(rec);
+                cdSize += rec.length;
+            }
+            res.write(endRecord(metas.length, cdSize, cdOffset));
+            res.end();
+        }
+        catch (error) {
+            fail(runtime, req, res, extensionId, error);
+        }
+    });
 }
 
 
@@ -15030,7 +15242,7 @@ class HostBridgeService {
     }
     async bootstrap() {
         const inspected = await this.inspect();
-        if (inspected.status === 'ready' || inspected.status === 'conflict' || inspected.status === 'error') {
+        if (inspected.status === 'unsupported' || inspected.status === 'ready' || inspected.status === 'conflict' || inspected.status === 'error') {
             return inspected;
         }
         if (AUTO_INSTALL_DISABLED.has(this.env.AUTHORITY_HOST_BRIDGE_AUTO_INSTALL?.trim().toLowerCase() ?? '')) {
@@ -15042,6 +15254,10 @@ class HostBridgeService {
     }
     async inspect() {
         try {
+            const unsupported = this.checkVersionSupport();
+            if (unsupported) {
+                return unsupported;
+            }
             const context = this.resolveContext();
             const record = this.readRecord(context.stRoot);
             if (record?.phase === 'applying' || record?.phase === 'rolling_back') {
@@ -15069,6 +15285,10 @@ class HostBridgeService {
         }
     }
     async install(options = {}) {
+        const unsupported = this.checkVersionSupport();
+        if (unsupported) {
+            return unsupported;
+        }
         let context;
         try {
             context = this.resolveContext();
@@ -15157,6 +15377,10 @@ class HostBridgeService {
         return await this.install({ repair: true });
     }
     async rollback(options = {}) {
+        const unsupported = this.checkVersionSupport();
+        if (unsupported) {
+            return unsupported;
+        }
         try {
             const context = this.resolveContext();
             const record = this.readRecord(context.stRoot);
@@ -15172,6 +15396,42 @@ class HostBridgeService {
         catch (error) {
             return this.setStatus('error', errorMessage(error));
         }
+    }
+    /**
+     * Version-gate the Host Bridge without touching the host's source files.
+     *
+     * The bridge patch is anchored to a specific SillyTavern source layout. On
+     * hosts whose package version is not in the manifest's allow-list (e.g.
+     * Luker, whose fork of SillyTavern reports its own version and whose
+     * sources the patch anchors do not match), installing would back up,
+     * mutate and then roll back host files on every boot. Instead, report a
+     * distinct `unsupported` status so callers can skip the bridge cleanly —
+     * matching the cross-host capability matrix where Host Bridge is absent
+     * on unsupported hosts. Core Authority capabilities are unaffected.
+     *
+     * Returns a status snapshot when unsupported, or null when the host
+     * version is allowed and the bridge may proceed.
+     */
+    checkVersionSupport() {
+        const bundleDir = node_path__WEBPACK_IMPORTED_MODULE_3___default().join(this.pluginRoot, _constants_js__WEBPACK_IMPORTED_MODULE_4__.AUTHORITY_MANAGED_HOST_BRIDGE_DIR);
+        const manifestPath = node_path__WEBPACK_IMPORTED_MODULE_3___default().join(bundleDir, 'manifest.json');
+        if (!node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(manifestPath)) {
+            return null;
+        }
+        const manifest = (0,_utils_js__WEBPACK_IMPORTED_MODULE_5__.readJsonFile)(manifestPath, null);
+        if (!manifest || manifest.schemaVersion !== 1 || manifest.host !== 'sillytavern' || !manifest.bridgeVersion) {
+            return null;
+        }
+        const stRoot = this.resolveSillyTavernRoot();
+        if (!stRoot) {
+            return null;
+        }
+        const packageJson = (0,_utils_js__WEBPACK_IMPORTED_MODULE_5__.readJsonFile)(node_path__WEBPACK_IMPORTED_MODULE_3___default().join(stRoot, 'package.json'), {});
+        const hostPackageVersion = String(packageJson.version ?? 'unknown');
+        if (!manifest.supportedPackageVersions.includes(hostPackageVersion)) {
+            return this.setStatus('unsupported', `Host Bridge is not available for this host: SillyTavern ${hostPackageVersion} is not supported by Host Bridge ${manifest.bridgeVersion}. Core Authority features remain available.`, { manifest, hostPackageVersion, stRoot: node_path__WEBPACK_IMPORTED_MODULE_3___default().resolve(stRoot) });
+        }
+        return null;
     }
     resolveContext() {
         const bundleDir = node_path__WEBPACK_IMPORTED_MODULE_3___default().join(this.pluginRoot, _constants_js__WEBPACK_IMPORTED_MODULE_4__.AUTHORITY_MANAGED_HOST_BRIDGE_DIR);
@@ -26359,6 +26619,16 @@ module.exports = require("node:fs");
 
 /***/ },
 
+/***/ "node:fs/promises"
+/*!***********************************!*\
+  !*** external "node:fs/promises" ***!
+  \***********************************/
+(module) {
+
+module.exports = require("node:fs/promises");
+
+/***/ },
+
 /***/ "node:net"
 /*!***************************!*\
   !*** external "node:net" ***!
@@ -26544,7 +26814,13 @@ async function init(router) {
     (0,_routes_js__WEBPACK_IMPORTED_MODULE_2__.registerRoutes)(router, runtime);
     await runtime.install.bootstrap();
     const hostBridgeStatus = await runtime.hostBridge.bootstrap();
-    if (hostBridgeStatus.requiresRestart) {
+    if (hostBridgeStatus.status === 'unsupported') {
+        // Expected on hosts the bridge was never built for (e.g. Luker): a
+        // clean skip, not a failure. Keep it as info so it is not mistaken for
+        // a broken plugin in the boot log.
+        console.info(`[authority] ${hostBridgeStatus.message}`);
+    }
+    else if (hostBridgeStatus.requiresRestart) {
         console.warn(`[authority] ${hostBridgeStatus.message}`);
     }
     else if (hostBridgeStatus.status === 'conflict' || hostBridgeStatus.status === 'error') {

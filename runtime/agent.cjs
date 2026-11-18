@@ -282,7 +282,7 @@ class HostBridgeService {
     }
     async bootstrap() {
         const inspected = await this.inspect();
-        if (inspected.status === 'ready' || inspected.status === 'conflict' || inspected.status === 'error') {
+        if (inspected.status === 'unsupported' || inspected.status === 'ready' || inspected.status === 'conflict' || inspected.status === 'error') {
             return inspected;
         }
         if (AUTO_INSTALL_DISABLED.has(this.env.AUTHORITY_HOST_BRIDGE_AUTO_INSTALL?.trim().toLowerCase() ?? '')) {
@@ -294,6 +294,10 @@ class HostBridgeService {
     }
     async inspect() {
         try {
+            const unsupported = this.checkVersionSupport();
+            if (unsupported) {
+                return unsupported;
+            }
             const context = this.resolveContext();
             const record = this.readRecord(context.stRoot);
             if (record?.phase === 'applying' || record?.phase === 'rolling_back') {
@@ -321,6 +325,10 @@ class HostBridgeService {
         }
     }
     async install(options = {}) {
+        const unsupported = this.checkVersionSupport();
+        if (unsupported) {
+            return unsupported;
+        }
         let context;
         try {
             context = this.resolveContext();
@@ -409,6 +417,10 @@ class HostBridgeService {
         return await this.install({ repair: true });
     }
     async rollback(options = {}) {
+        const unsupported = this.checkVersionSupport();
+        if (unsupported) {
+            return unsupported;
+        }
         try {
             const context = this.resolveContext();
             const record = this.readRecord(context.stRoot);
@@ -424,6 +436,42 @@ class HostBridgeService {
         catch (error) {
             return this.setStatus('error', errorMessage(error));
         }
+    }
+    /**
+     * Version-gate the Host Bridge without touching the host's source files.
+     *
+     * The bridge patch is anchored to a specific SillyTavern source layout. On
+     * hosts whose package version is not in the manifest's allow-list (e.g.
+     * Luker, whose fork of SillyTavern reports its own version and whose
+     * sources the patch anchors do not match), installing would back up,
+     * mutate and then roll back host files on every boot. Instead, report a
+     * distinct `unsupported` status so callers can skip the bridge cleanly —
+     * matching the cross-host capability matrix where Host Bridge is absent
+     * on unsupported hosts. Core Authority capabilities are unaffected.
+     *
+     * Returns a status snapshot when unsupported, or null when the host
+     * version is allowed and the bridge may proceed.
+     */
+    checkVersionSupport() {
+        const bundleDir = node_path__WEBPACK_IMPORTED_MODULE_3___default().join(this.pluginRoot, _constants_js__WEBPACK_IMPORTED_MODULE_4__.AUTHORITY_MANAGED_HOST_BRIDGE_DIR);
+        const manifestPath = node_path__WEBPACK_IMPORTED_MODULE_3___default().join(bundleDir, 'manifest.json');
+        if (!node_fs__WEBPACK_IMPORTED_MODULE_2___default().existsSync(manifestPath)) {
+            return null;
+        }
+        const manifest = (0,_utils_js__WEBPACK_IMPORTED_MODULE_5__.readJsonFile)(manifestPath, null);
+        if (!manifest || manifest.schemaVersion !== 1 || manifest.host !== 'sillytavern' || !manifest.bridgeVersion) {
+            return null;
+        }
+        const stRoot = this.resolveSillyTavernRoot();
+        if (!stRoot) {
+            return null;
+        }
+        const packageJson = (0,_utils_js__WEBPACK_IMPORTED_MODULE_5__.readJsonFile)(node_path__WEBPACK_IMPORTED_MODULE_3___default().join(stRoot, 'package.json'), {});
+        const hostPackageVersion = String(packageJson.version ?? 'unknown');
+        if (!manifest.supportedPackageVersions.includes(hostPackageVersion)) {
+            return this.setStatus('unsupported', `Host Bridge is not available for this host: SillyTavern ${hostPackageVersion} is not supported by Host Bridge ${manifest.bridgeVersion}. Core Authority features remain available.`, { manifest, hostPackageVersion, stRoot: node_path__WEBPACK_IMPORTED_MODULE_3___default().resolve(stRoot) });
+        }
+        return null;
     }
     resolveContext() {
         const bundleDir = node_path__WEBPACK_IMPORTED_MODULE_3___default().join(this.pluginRoot, _constants_js__WEBPACK_IMPORTED_MODULE_4__.AUTHORITY_MANAGED_HOST_BRIDGE_DIR);

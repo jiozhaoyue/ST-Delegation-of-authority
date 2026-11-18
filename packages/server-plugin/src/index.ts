@@ -25,7 +25,12 @@ export async function init(router: any): Promise<void> {
     registerRoutes(router, runtime);
     await runtime.install.bootstrap();
     const hostBridgeStatus = await runtime.hostBridge.bootstrap();
-    if (hostBridgeStatus.requiresRestart) {
+    if (hostBridgeStatus.status === 'unsupported') {
+        // Expected on hosts the bridge was never built for (e.g. Luker): a
+        // clean skip, not a failure. Keep it as info so it is not mistaken for
+        // a broken plugin in the boot log.
+        console.info(`[authority] ${hostBridgeStatus.message}`);
+    } else if (hostBridgeStatus.requiresRestart) {
         console.warn(`[authority] ${hostBridgeStatus.message}`);
     } else if (hostBridgeStatus.status === 'conflict' || hostBridgeStatus.status === 'error') {
         console.warn(`[authority] Host Bridge ${hostBridgeStatus.status}: ${hostBridgeStatus.message}`);

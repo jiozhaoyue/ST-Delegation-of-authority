@@ -69,6 +69,32 @@ describe('HostBridgeService', () => {
         expect(fs.existsSync(path.join(fixture.stRoot, 'bridge.js'))).toBe(false);
     });
 
+    it('skips cleanly on an unsupported host version without patching host files', async () => {
+        const fixture = createFixture();
+        // Simulate a fork whose reported package version is not on the
+        // manifest allow-list (e.g. Luker reporting 2.9.0-rc.2).
+        fs.writeFileSync(
+            path.join(fixture.stRoot, 'package.json'),
+            JSON.stringify({ name: 'luker', version: '2.9.0-rc.2', type: 'module' }),
+            'utf8',
+        );
+        const originalHost = fs.readFileSync(path.join(fixture.stRoot, 'host.js'), 'utf8');
+        const service = createService(fixture);
+
+        const boot = await service.bootstrap();
+        expect(boot.status).toBe('unsupported');
+        expect(boot.hostPackageVersion).toBe('2.9.0-rc.2');
+        expect(boot.message).toContain('not supported');
+        // The bridge must not touch host source files on an unsupported host.
+        expect(fs.readFileSync(path.join(fixture.stRoot, 'host.js'), 'utf8')).toBe(originalHost);
+        expect(fs.existsSync(path.join(fixture.stRoot, 'bridge.js'))).toBe(false);
+        expect(fs.existsSync(path.join(fixture.stateDir, 'records'))).toBe(false);
+
+        // Direct install/rollback calls also short-circuit to unsupported.
+        expect((await createService(fixture).install()).status).toBe('unsupported');
+        expect((await createService(fixture).rollback()).status).toBe('unsupported');
+    });
+
     it('performs a controlled automatic upgrade for a verified managed bridge', async () => {
         const fixture = createFixture();
         const service = createService(fixture);

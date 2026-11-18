@@ -82,7 +82,7 @@ export class HostBridgeService {
 
     async bootstrap(): Promise<HostBridgeStatusSnapshot> {
         const inspected = await this.inspect();
-        if (inspected.status === 'ready' || inspected.status === 'conflict' || inspected.status === 'error') {
+        if (inspected.status === 'unsupported' || inspected.status === 'ready' || inspected.status === 'conflict' || inspected.status === 'error') {
             return inspected;
         }
         if (AUTO_INSTALL_DISABLED.has(this.env.AUTHORITY_HOST_BRIDGE_AUTO_INSTALL?.trim().toLowerCase() ?? '')) {
@@ -95,6 +95,10 @@ export class HostBridgeService {
 
     async inspect(): Promise<HostBridgeStatusSnapshot> {
         try {
+            const unsupported = this.checkVersionSupport();
+            if (unsupported) {
+                return unsupported;
+            }
             const context = this.resolveContext();
             const record = this.readRecord(context.stRoot);
             if (record?.phase === 'applying' || record?.phase === 'rolling_back') {
@@ -122,6 +126,10 @@ export class HostBridgeService {
     }
 
     async install(options: { repair?: boolean } = {}): Promise<HostBridgeStatusSnapshot> {
+        const unsupported = this.checkVersionSupport();
+        if (unsupported) {
+            return unsupported;
+        }
         let context: ReturnType<HostBridgeService['resolveContext']>;
         try {
             context = this.resolveContext();
@@ -214,6 +222,10 @@ export class HostBridgeService {
     }
 
     async rollback(options: { force?: boolean } = {}): Promise<HostBridgeStatusSnapshot> {
+        const unsupported = this.checkVersionSupport();
+        if (unsupported) {
+            return unsupported;
+        }
         try {
             const context = this.resolveContext();
             const record = this.readRecord(context.stRoot);
@@ -228,6 +240,47 @@ export class HostBridgeService {
         } catch (error) {
             return this.setStatus('error', errorMessage(error));
         }
+    }
+
+    /**
+     * Version-gate the Host Bridge without touching the host's source files.
+     *
+     * The bridge patch is anchored to a specific SillyTavern source layout. On
+     * hosts whose package version is not in the manifest's allow-list (e.g.
+     * Luker, whose fork of SillyTavern reports its own version and whose
+     * sources the patch anchors do not match), installing would back up,
+     * mutate and then roll back host files on every boot. Instead, report a
+     * distinct `unsupported` status so callers can skip the bridge cleanly —
+     * matching the cross-host capability matrix where Host Bridge is absent
+     * on unsupported hosts. Core Authority capabilities are unaffected.
+     *
+     * Returns a status snapshot when unsupported, or null when the host
+     * version is allowed and the bridge may proceed.
+     */
+    private checkVersionSupport(): HostBridgeStatusSnapshot | null {
+        const bundleDir = path.join(this.pluginRoot, AUTHORITY_MANAGED_HOST_BRIDGE_DIR);
+        const manifestPath = path.join(bundleDir, 'manifest.json');
+        if (!fs.existsSync(manifestPath)) {
+            return null;
+        }
+        const manifest = readJsonFile<HostBridgeManifest | null>(manifestPath, null);
+        if (!manifest || manifest.schemaVersion !== 1 || manifest.host !== 'sillytavern' || !manifest.bridgeVersion) {
+            return null;
+        }
+        const stRoot = this.resolveSillyTavernRoot();
+        if (!stRoot) {
+            return null;
+        }
+        const packageJson = readJsonFile<{ name?: string; version?: string }>(path.join(stRoot, 'package.json'), {});
+        const hostPackageVersion = String(packageJson.version ?? 'unknown');
+        if (!manifest.supportedPackageVersions.includes(hostPackageVersion)) {
+            return this.setStatus(
+                'unsupported',
+                `Host Bridge is not available for this host: SillyTavern ${hostPackageVersion} is not supported by Host Bridge ${manifest.bridgeVersion}. Core Authority features remain available.`,
+                { manifest, hostPackageVersion, stRoot: path.resolve(stRoot) },
+            );
+        }
+        return null;
     }
 
     private resolveContext() {
