@@ -242,6 +242,8 @@ describe('registerRoutes', () => {
             '/trivium/list-mappings',
             '/host/events/commit',
             '/host/events/list',
+            '/host/st-backup',
+            '/host/st-restore',
             '/modules/:moduleId/transactions/:transactionName',
             '/registry/refresh',
             '/http/fetch',

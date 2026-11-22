@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { registerBackupRoutes } from './backup-routes.js';
+import { createZipArchive } from '../services/zip-archive.js';
 import type { AuthorityRuntime } from '../runtime.js';
 import type { AuthorityRequest, AuthorityResponse } from '../types.js';
 
@@ -118,5 +119,139 @@ describe('registerBackupRoutes /host/st-backup', () => {
         const { statusCode, body } = await h.run();
         expect(statusCode).toBe(200);
         expect(listEntries(body)).toEqual(['characters/card.png']);
+    });
+});
+
+/** 恢复端点最小桩：临时目录当用户数据根，收集型 res */
+function makeRestoreHarness(body: Record<string, unknown>) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'st-restore-test-'));
+    const chunks: Buffer[] = [];
+    let statusCode = 200;
+    const res: AuthorityResponse = {
+        status(code) { statusCode = code; return this; },
+        json(data: unknown) { chunks.push(Buffer.from(JSON.stringify(data))); },
+        send() { /* unused */ },
+        setHeader() { /* unused */ },
+        write(chunk) { chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)); },
+        end() { /* flush marker */ },
+    };
+    const runtime = {
+        sessions: { assertSession: async () => ({ extension: { id: 'test-ext' } }) },
+        audit: { logUsage: async () => undefined },
+    } as unknown as AuthorityRuntime;
+    const handlers = new Map<string, (req: AuthorityRequest, res: AuthorityResponse) => Promise<void> | void>();
+    const router = {
+        get() { /* unused */ },
+        post(p: string, h: (req: AuthorityRequest, res: AuthorityResponse) => Promise<void> | void) { handlers.set(`POST ${p}`, h); },
+    };
+    registerBackupRoutes(router, runtime, () => undefined as never);
+    const req = {
+        body,
+        user: {
+            profile: { handle: 'default-user', admin: false },
+            directories: { root },
+        },
+        headers: {},
+    } as unknown as AuthorityRequest;
+    return {
+        root,
+        run: async () => {
+            const h = handlers.get('POST /host/st-restore');
+            if (!h) throw new Error('route not registered');
+            await h(req, res);
+            return { statusCode, body: JSON.parse(Buffer.concat(chunks).toString('utf8')) as { restoredCount: number; skippedCount: number; mode?: string } };
+        },
+    };
+}
+
+/** 造一个含 characters 与 secrets 两个类目条目的 stored zip（bytes 为 base64） */
+function makeArchive(entries: { path: string; content: string }[]): string {
+    const zip = createZipArchive(entries.map((e) => ({ path: e.path, bytes: Buffer.from(e.content) })));
+    return zip.toString('base64');
+}
+
+describe('registerBackupRoutes /host/st-restore', () => {
+    it('注册了 POST /host/st-restore', () => {
+        const posts: string[] = [];
+        registerBackupRoutes({
+            get: () => undefined, post: (p: string) => posts.push(p),
+        } as never, {} as AuthorityRuntime, () => undefined as never);
+        expect(posts).toContain('/host/st-restore');
+    });
+
+    it('selection 只勾 characters ⇒ 只落盘 characters，secrets 跳过（AC-1）', async () => {
+        const h = makeRestoreHarness({
+            avatar: makeArchive([
+                { path: 'characters/alice.json', content: '{"name":"alice"}' },
+                { path: 'secrets.json', content: '{"key":"x"}' },
+            ]),
+            selection: { characters: true },
+            mode: 'overwrite',
+        });
+        const { statusCode, body } = await h.run();
+        expect(statusCode).toBe(200);
+        expect(body.restoredCount).toBe(1);
+        expect(body.skippedCount).toBe(1);
+        expect(fs.readFileSync(path.join(h.root, 'characters', 'alice.json'), 'utf8')).toBe('{"name":"alice"}');
+        expect(fs.existsSync(path.join(h.root, 'secrets.json'))).toBe(false);
+    });
+
+    it('merge 模式：内容相同跳过、内容不同覆盖（AC-2）', async () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'st-restore-merge-'));
+        fs.mkdirSync(path.join(root, 'chats'), { recursive: true });
+        fs.writeFileSync(path.join(root, 'chats', 'a.jsonl'), 'old');
+        const zip = createZipArchive([
+            { path: 'chats/a.jsonl', bytes: Buffer.from('old') },
+            { path: 'chats/b.jsonl', bytes: Buffer.from('new') },
+        ]);
+        const runtime = {
+            sessions: { assertSession: async () => ({ extension: { id: 'test-ext' } }) },
+        } as unknown as AuthorityRuntime;
+        const handlers = new Map<string, (req: AuthorityRequest, res: AuthorityResponse) => Promise<void> | void>();
+        registerBackupRoutes({
+            get() { /* unused */ },
+            post(p: string, fn: (req: AuthorityRequest, res: AuthorityResponse) => Promise<void> | void) { handlers.set(`POST ${p}`, fn); },
+        } as never, runtime, () => undefined as never);
+        const out: { restoredCount: number; skippedCount: number }[] = [];
+        const res: AuthorityResponse = {
+            status() { return this; },
+            json(data: unknown) { out.push(data as { restoredCount: number; skippedCount: number }); },
+            send() { /* unused */ },
+            setHeader() { /* unused */ },
+            write() { /* unused */ },
+            end() { /* unused */ },
+        };
+        const req = {
+            body: { avatar: zip, selection: { chats: true }, mode: 'merge' },
+            user: { profile: { handle: 'u', admin: false }, directories: { root } },
+            headers: {},
+        } as unknown as AuthorityRequest;
+        await handlers.get('POST /host/st-restore')!(req, res);
+        expect(out[0]).toMatchObject({ restoredCount: 1, skippedCount: 1 });
+        expect(fs.readFileSync(path.join(root, 'chats', 'a.jsonl'), 'utf8')).toBe('old');
+        expect(fs.readFileSync(path.join(root, 'chats', 'b.jsonl'), 'utf8')).toBe('new');
+    });
+
+    it('空 selection / 全 false ⇒ 400', async () => {
+        const h = makeRestoreHarness({ avatar: makeArchive([{ path: 'characters/a.json', content: '{}' }]), selection: {} });
+        const { statusCode } = await h.run();
+        expect(statusCode).toBe(400);
+    });
+
+    it('无归档体 ⇒ 400', async () => {
+        const h = makeRestoreHarness({ selection: { characters: true } });
+        const { statusCode } = await h.run();
+        expect(statusCode).toBe(400);
+    });
+
+    it('selection 为 JSON 字符串（multipart 字段形态）⇒ 正常解析', async () => {
+        const h = makeRestoreHarness({
+            avatar: makeArchive([{ path: 'characters/a.json', content: '{}' }]),
+            selection: JSON.stringify({ characters: true }),
+            mode: 'merge',
+        });
+        const { statusCode, body } = await h.run();
+        expect(statusCode).toBe(200);
+        expect(body.restoredCount).toBe(1);
     });
 });

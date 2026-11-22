@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { AUTHORITY_SDK_EXTENSION_ID } from '../constants.js';
+import { readZipArchive } from '../services/zip-archive.js';
 import type { AuthorityRuntime } from '../runtime.js';
 import type { AuthorityRequest, AuthorityResponse } from '../types.js';
 import { getSessionToken, getUserContext } from '../utils.js';
@@ -14,7 +15,12 @@ import { getSessionToken, getUserContext } from '../utils.js';
  * 只把勾选类目打进 zip（stored 无压缩、**流式**输出——GB 级数据不驻留内存）。
  *
  * 粒度=类目级（与 Luker 原生 selection 同构）；不臆造文件/路径级粒度。
- * 整包恢复（写宿主目录）属高危面，留待治理裁定后另开路由，本文件不做。
+ *
+ * 对偶恢复端点 `POST /host/st-restore` 同在本文件：ST 1.19 无整包恢复端点，
+ * 消费方需要可写回用户目录的恢复通道。镜像 Luker restore-backup 契约
+ * （multipart ZIP + selection 十类目 + mode merge/overwrite），与 st-manager
+ * 恢复桥分工（后者面向运维管理控制面，本端点面向插件数据包用户数据面）。
+ * 「增量」= 按 selection 类目写入，非字节 diff。
  */
 
 type RouterLike = {
@@ -148,6 +154,63 @@ function endRecord(count: number, cdSize: number, cdOffset: number): Buffer {
     return h;
 }
 
+/** 恢复模式：merge=只写缺失/内容有变化的文件；overwrite=无条件覆盖。 */
+type RestoreMode = 'merge' | 'overwrite';
+
+/** 从请求体提取 ZIP 字节：兼容 multipart 解析后的文件字段与整包 base64 两种承载。 */
+function extractArchiveBytes(body: unknown): Buffer | null {
+    if (!body || typeof body !== 'object') return null;
+    const b = body as Record<string, unknown>;
+    const candidate = b.avatar ?? b.archive ?? b.zip ?? b.file;
+    if (Buffer.isBuffer(candidate)) return candidate;
+    if (candidate instanceof Uint8Array) return Buffer.from(candidate);
+    if (typeof candidate === 'string') {
+        const cleaned = candidate.replace(/^data:[^;]*;base64,/, '');
+        return cleaned ? Buffer.from(cleaned, 'base64') : null;
+    }
+    return null;
+}
+
+/** selection 兼容 JSON 字符串（multipart 字段）与对象（JSON body）两种形态。 */
+function parseRestoreSelection(raw: unknown): Record<string, unknown> {
+    if (typeof raw === 'string') {
+        try {
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {};
+        } catch {
+            return {};
+        }
+    }
+    return raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+}
+
+/** 判断归档条目相对路径归属哪个 selection 类目；未命中返回 null。 */
+function categoryOfEntry(rel: string): string | null {
+    for (const [category, paths] of Object.entries(CATEGORY_PATHS)) {
+        for (const p of paths) {
+            if (rel === p || rel.startsWith(`${p}/`)) return category;
+        }
+    }
+    return null;
+}
+
+/** 单条目落盘；返回是否实际写入。路径穿越由 zip-archive 规范化 + 此处绝对路径校验双重拦截。 */
+async function writeRestoredEntry(rootDir: string, rel: string, bytes: Buffer, mode: RestoreMode): Promise<boolean> {
+    const abs = path.resolve(rootDir, rel);
+    const rootAbs = path.resolve(rootDir);
+    if (abs !== rootAbs && !abs.startsWith(`${rootAbs}${path.sep}`)) {
+        throw new Error('Zip entry escapes user data root');
+    }
+    if (mode === 'merge') {
+        try {
+            if ((await fs.readFile(abs)).equals(bytes)) return false; // 内容相同 → 跳过
+        } catch { /* 文件缺失或不可读 → 写入 */ }
+    }
+    await fs.mkdir(path.dirname(abs), { recursive: true });
+    await fs.writeFile(abs, bytes);
+    return true;
+}
+
 export function registerBackupRoutes(router: RouterLike, runtime: AuthorityRuntime, fail: RouteFailureHandler): void {
     router.post('/host/st-backup', async (req, res) => {
         const extensionId = AUTHORITY_SDK_EXTENSION_ID;
@@ -210,6 +273,55 @@ export function registerBackupRoutes(router: RouterLike, runtime: AuthorityRunti
             }
             res.write(endRecord(metas.length, cdSize, cdOffset));
             res.end();
+        } catch (error) {
+            fail(runtime, req, res, extensionId, error);
+        }
+    });
+
+    // 对偶恢复端点：镜像 Luker restore-backup 契约（整包 multipart/base64 ZIP
+    // + 十类目 selection + mode merge/overwrite）。分片 uploads/chunks/finalize
+    // 协议留待后续迭代；本轮先交付整包解包与按类目落盘。
+    router.post('/host/st-restore', async (req, res) => {
+        const extensionId = AUTHORITY_SDK_EXTENSION_ID;
+        try {
+            const user = getUserContext(req);
+            await runtime.sessions.assertSession(getSessionToken(req), user);
+
+            const body = req.body as Record<string, unknown> | undefined;
+            const archive = extractArchiveBytes(body);
+            if (!archive || archive.length === 0) {
+                res.status(400).json({ error: 'A ZIP archive is required for restore.', code: 'bad-request' });
+                return;
+            }
+
+            const selection = parseRestoreSelection(body?.selection);
+            const chosen = new Set(Object.keys(CATEGORY_PATHS).filter((k) => selection[k] === true));
+            if (chosen.size === 0) {
+                res.status(400).json({ error: 'At least one restore category must be selected.', code: 'bad-request' });
+                return;
+            }
+
+            const rawMode = String(body?.mode ?? 'merge').toLowerCase();
+            const mode: RestoreMode = rawMode === 'overwrite' ? 'overwrite' : 'merge';
+
+            const rootDir = String(user.directories?.root ?? user.rootDir ?? '');
+            if (!rootDir) {
+                res.status(500).json({ error: 'Host user data root unavailable.', code: 'internal' });
+                return;
+            }
+
+            const entries = readZipArchive(archive);
+            let restoredCount = 0;
+            let skippedCount = 0;
+            for (const [rel, bytes] of entries) {
+                if (!chosen.has(categoryOfEntry(rel) ?? '')) {
+                    skippedCount += 1; // 未勾选类目 → 跳过
+                    continue;
+                }
+                if (await writeRestoredEntry(rootDir, rel, bytes, mode)) restoredCount += 1;
+                else skippedCount += 1;
+            }
+            res.status(200).json({ restoredCount, skippedCount, mode });
         } catch (error) {
             fail(runtime, req, res, extensionId, error);
         }
